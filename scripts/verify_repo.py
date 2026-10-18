@@ -8,6 +8,7 @@ installation.
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 import sys
 
@@ -41,7 +42,7 @@ TEXT_REQUIREMENTS = {
         "EXECUTION_UNAVAILABLE",
     ),
     "docs/ARCHITECTURE.md": (
-        "Candidate is input data",
+        "The candidate is input data",
         "VALIDATOR_FAIL",
         "EXECUTION_UNAVAILABLE",
         "trusted external executable validation with exact-target evidence",
@@ -79,9 +80,30 @@ TEXT_REQUIREMENTS = {
     ),
 }
 
+ALLOWED_VERIFIER_IMPORTS = {
+    "__future__",
+    "ast",
+    "pathlib",
+    "sys",
+}
+
 
 def read_text(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
+
+
+def verifier_imports(source: str) -> set[str]:
+    tree = ast.parse(source, filename="scripts/verify_repo.py")
+    imports: set[str] = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.add(alias.name.split(".", 1)[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".", 1)[0])
+
+    return imports
 
 
 def main() -> int:
@@ -103,15 +125,14 @@ def main() -> int:
                     f"{relative_path}: missing required contract marker: {marker!r}"
                 )
 
-    # The canonical verifier should remain dependency-free at foundation stage.
     source = read_text("scripts/verify_repo.py")
-    forbidden_imports = ("import yaml", "from yaml", "import requests", "from requests")
-    for marker in forbidden_imports:
-        if marker in source:
-            failures.append(
-                "scripts/verify_repo.py: third-party dependency introduced "
-                f"without updating the foundation contract: {marker!r}"
-            )
+    unexpected_imports = verifier_imports(source) - ALLOWED_VERIFIER_IMPORTS
+    if unexpected_imports:
+        failures.append(
+            "scripts/verify_repo.py: non-foundation dependency/import introduced "
+            "without updating the contract: "
+            + ", ".join(sorted(unexpected_imports))
+        )
 
     if failures:
         print("REPOSITORY_CONTRACT: FAIL")
