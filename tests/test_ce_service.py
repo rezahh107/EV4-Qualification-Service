@@ -208,7 +208,7 @@ class CEServiceTests(unittest.TestCase):
                 ('accepted-with-errors',{**accepted,'errors':['CANONICAL_BLOCKER']},0,official_bytes),
                 ('accepted-exit-mismatch',accepted,1,official_bytes),
                 ('accepted-no-output',accepted,0,None),
-                ('accepted-output-mismatch',accepted,0,b'{}\\n'),
+                ('accepted-output-mismatch',accepted,0,b'{}'),
                 ('accepted-hash-mismatch',{**accepted,'official_handoff_sha256':'0'*64},0,official_bytes),
                 ('accepted-missing-payload',{**accepted,'official_handoff':None},0,official_bytes),
                 ('rejected-exit-mismatch',rejected,0,None),
@@ -222,7 +222,7 @@ class CEServiceTests(unittest.TestCase):
                     def simulated_validator(command,**kwargs):
                         out.mkdir(parents=True,exist_ok=True)
                         (out/'canonical-result.json').write_text(
-                            json.dumps(payload,ensure_ascii=False)+'\\n',encoding='utf-8')
+                            json.dumps(payload,ensure_ascii=False),encoding='utf-8')
                         if official is not None:
                             (out/'official-ce-handoff.json').write_bytes(official)
                         return subprocess.CompletedProcess(command,exit_status,stdout='',stderr='')
