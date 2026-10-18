@@ -1,0 +1,55 @@
+name: CE Canonical Validation
+
+on:
+  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  service-regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Exercise real canonical CE PASS and FAIL fixtures
+        run: python3 -m unittest discover -s tests -p 'test_ce_service.py' -v
+
+  qualify-submission:
+    # pull_request_target workflows are sourced from trusted base, never PR head.
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted service code from base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Checkout candidate data from exact PR head, never execute it
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: incoming
+          persist-credentials: false
+      - name: Restore pinned validator source
+        run: python3 scripts/restore_ce_source.py
+      - name: Qualify submitted CE data
+        env:
+          INPUT_SHA: ${{ github.event.pull_request.head.sha }}
+          SERVICE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/run_ce.py --submissions incoming/submissions --output ce-results
+      - name: Upload diagnostic result and official handoff only on PASS
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ce-validation-pr-${{ github.event.pull_request.number }}-head-${{ github.event.pull_request.head.sha }}-attempt-${{ github.run_attempt }}
+          path: ce-results/
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,23 @@
+{
+  "archive_sha256": "423e234f35617f16bb84ce7c5b55ee935f554de0391ea3eb944f1ad071c94b42",
+  "files": {
+    "fixtures/chain/ARCHITECT_HANDOFF.json": "b7650d894021cbc53bff5991d2a09410c0cd3ca1e0a16c666925bc5ed9c9324e",
+    "fixtures/chain/CE_CANDIDATE_HANDOFF.json": "551c3ef009c009f25fcc961493006d9ce8b63b9600048c74abb095126ebab82b",
+    "source/ce/architect_coverage_adapter_v1.2.0.json": "44836bb44e9b57d52258781526aed256fd6889a32f6f22e7f2bf169d7676c66e",
+    "source/style/EV4_PERSONAL_STYLE_PROFILE_NUURO_v1.0.1.json": "fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb",
+    "source/style/EV4_PROJECT_CONTEXT_STYLE_CONTRACT_v1.2.1.json": "31760a1e1fecdd8449cf618e7f196dfb0e13703aefd45450aaad5a965fc68d1d",
+    "source/style/style_precedence_dimension_registry_v1.2.0.json": "1a83114cac28cc64ea354999b35b448ba5bfbedee8da6c9feee4931a1cf05785",
+    "validators/compute_cross_ru_consistency.py": "112f43a829907f63b9c1389d74fb96a46c1e14aa54faac3487d7dc6c5350ce99",
+    "validators/compute_self_audit.py": "1ebf39b1b13af399fde61f8403403d14ae9489380fefb9684b3012e51372ba6d",
+    "validators/derive_ce_completion_receipt_v1_3.py": "b7e86587d6883048d8892378eb3a75bffe9d080e5eaa897d9e157076db40acd6",
+    "validators/derive_ce_coverage_manifest.py": "3d92878404f78df4018b78be4af378bb90c49f9459f3d5d564c501ea8ebaad6c",
+    "validators/derive_style_applicability_manifest.py": "87afe812d8b610c3eded0b4694d2ef16e397a6d444ff39c9edb04f400f18c372",
+    "validators/ev4_common.py": "483f46e29ecf185033f4c85f55205591c24f9037f35a9ddcad89e03f16a9b813",
+    "validators/qualify_ce_handoff.py": "d752aaba6a522cbd6218cd3e633c186e80c28043c9fbb195471ef1ff9a5060a7",
+    "validators/validate_not_applicable.py": "bf1f90d882265a4de5d40cb48dd78dca32e083b58494a840a85f9050d7b728f5",
+    "validators/validate_recursive_boundary.py": "fa7e673ced723d5903e5526444d4ab7269ba723b6d402e5550fdfc9923d77d3a",
+    "validators/validate_style_applicability_and_precedence.py": "ba50cf7f19d78f2f84b7f07dca69f524d82b2fd983b2bc9c07f79ae68ad7ce57"
+  },
+  "origin_bundle": "EV4_ROLE_SUPPORT_SOURCE_AND_COMPILER_BUNDLE_v1.5.0.zip",
+  "origin_bundle_sha256": "c6cec3fffe81caa3f3337c4e2528add02720701f93d388a0e96c5238225bdae4"
+}
