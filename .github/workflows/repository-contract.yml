@@ -1,0 +1,27 @@
+name: Repository Contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify repository contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Python runtime
+        run: python3 --version
+
+      - name: Verify repository contract
+        run: python3 scripts/verify_repo.py
