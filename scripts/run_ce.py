@@ -68,15 +68,37 @@ def run(submissions: Path, output: Path, *, head_sha: str, service_sha: str, run
         if not result_path.is_file():
             raise RuntimeError('VALIDATOR_DID_NOT_PRODUCE_RESULT:exit='+str(done.returncode))
         raw=json.loads(result_path.read_text(encoding='utf-8'))
-        report['errors']=raw.get('errors',[])
-        report['canonical_status']=raw.get('status')
-        report['validator_version']=raw.get('validator_version')
+        if not isinstance(raw,dict):
+            raise RuntimeError('CANONICAL_RESULT_NOT_OBJECT')
+        errors=raw.get('errors')
+        if not isinstance(errors,list) or any(not isinstance(error,str) for error in errors):
+            raise RuntimeError('CANONICAL_RESULT_ERRORS_INVALID')
+        status=raw.get('status')
+        if status not in ('OFFICIAL_ACCEPTED','REJECTED'):
+            raise RuntimeError('CANONICAL_RESULT_STATUS_INVALID')
+        if raw.get('validator_version')!=report['validator']:
+            raise RuntimeError('CANONICAL_RESULT_VALIDATOR_VERSION_MISMATCH')
+        report['errors']=errors
+        report['canonical_status']=status
+        report['validator_version']=raw['validator_version']
         official=output/'official-ce-handoff.json'
-        if done.returncode==0 and raw.get('status')=='OFFICIAL_ACCEPTED' and official.is_file():
+        if done.returncode==0 and status=='OFFICIAL_ACCEPTED' and official.is_file():
+            # The pinned CE receipt cannot admit a candidate with blocking errors.
+            receipt=raw.get('completion_receipt')
+            if errors or not isinstance(receipt,dict) or receipt.get('final_handoff')!='ADMISSIBLE' or type(receipt.get('validation_error_count')) is not int or receipt['validation_error_count']!=0:
+                raise RuntimeError('CANONICAL_ACCEPTANCE_RECEIPT_INCONSISTENT')
+            payload=raw.get('official_handoff')
+            if not isinstance(payload,dict) or payload.get('completion_receipt')!=receipt or not isinstance(payload.get('qualification'),dict) or payload['qualification'].get('status')!='OFFICIAL_ACCEPTED':
+                raise RuntimeError('CANONICAL_OFFICIAL_PAYLOAD_INVALID')
+            expected_hash=hashlib.sha256((json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(',',':'))+'\n').encode('utf-8')).hexdigest()
+            if raw.get('official_handoff_sha256')!=expected_hash or json.loads(official.read_text(encoding='utf-8'))!=payload:
+                raise RuntimeError('CANONICAL_OFFICIAL_OUTPUT_MISMATCH')
             report['state']='VALIDATOR_PASS'
             report['official_handoff_sha256']=digest(official)
             exit_code=0
-        elif done.returncode==1 and raw.get('status')=='REJECTED' and not official.exists():
+        elif done.returncode==1 and status=='REJECTED' and not official.exists():
+            if raw.get('official_handoff') is not None or raw.get('official_handoff_sha256') is not None:
+                raise RuntimeError('CANONICAL_REJECTION_HAS_OFFICIAL_OUTPUT')
             report['state']='VALIDATOR_FAIL'
             exit_code=1
         else:
