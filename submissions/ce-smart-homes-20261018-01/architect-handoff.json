@@ -1,0 +1,369 @@
+{
+  "artifact_identity": {
+    "artifact_type": "EV4_TEMP_ARCHITECT_HANDOFF",
+    "suite_id": "EV4_TEMP_OPERATIONAL_PROJECT_SUITE",
+    "suite_version": "2.7.1",
+    "handoff_protocol_version": "2.8.0",
+    "package_version": "2.8.2",
+    "artifact_id": "EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01",
+    "created_on": "2026-10-18",
+    "stage_owner": "TEMP_ARCHITECT",
+    "stage_scope": "SINGLE_SECTION_HEADING_ONLY",
+    "completion_status": "ARCHITECT_SCOPE_CLOSED_WITH_SCOPED_DOWNSTREAM_CHECKS"
+  },
+  "architecture_lock": {
+    "source_architect_artifact_id": "EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01",
+    "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+    "approved_structure_tree": {
+      "external_parent": "EXISTING_SECTION_PARENT_NOT_IN_SCOPE",
+      "nodes": [
+        {
+          "node_id": "SECTION_HEADING",
+          "semantic_role": "single_section_title",
+          "tag_intent": "H2_BASELINE_CONDITIONAL_ON_PAGE_OUTLINE",
+          "node_type": "ONE_SEMANTIC_HEADING",
+          "text_source_order": "Smart Homes Are Connected. Now They Need Intelligence.",
+          "inline_segments": [
+            {
+              "segment_id": "base",
+              "text": "Smart Homes Are Connected. Now They Need ",
+              "emphasis_role": "base_heading_text"
+            },
+            {
+              "segment_id": "accent",
+              "text": "Intelligence.",
+              "emphasis_role": "color_accent_only"
+            }
+          ],
+          "desktop_reference_visual_lines": [
+            "Smart Homes Are Connected. Now",
+            "They Need Intelligence."
+          ],
+          "line_break_intent": "MATCH_REFERENCE_DESKTOP; does not mandate literal br or freeze mobile wrap",
+          "alignment_intent": "left_aligned_LTR",
+          "decorative_container_required": false,
+          "content_order_must_not_change": true
+        }
+      ],
+      "tree_scope_note": "Existing Section/parent placement and background excluded by Owner; no additional heading-specific wrapper is architecturally required."
+    },
+    "class_intent": {
+      "semantic_style_roles": [
+        "section_heading_base",
+        "section_heading_inline_accent"
+      ],
+      "base_color_role": "reference_dark_navy_or_compatible_existing_project_token_after_semantic_match",
+      "accent_color_role": "reference_green_only_for_Intelligence_period_included",
+      "class_scope": "Use compatible existing styles only when ownership and role genuinely match; otherwise keep styling scoped to this heading. No specific Global Class or Variable identity is proven.",
+      "typography": "Match reference by role; no global font or type scale inferred",
+      "avoid_unnecessary_class_or_container": true
+    },
+    "media_and_interaction_intent": {
+      "media": "NOT_APPLICABLE_TEXT_ONLY",
+      "interaction": "NONINTERACTIVE_SECTION_HEADING",
+      "meaningful_reading_text": "Smart Homes Are Connected. Now They Need Intelligence.",
+      "inline_accent_semantics": "PRESENTATIONAL_COLOR_NOT_SEPARATE_HEADING_OR_LINK",
+      "responsive_invariants": [
+        "one logical heading",
+        "natural text reading order",
+        "only Intelligence. accented",
+        "no clipped or overlapped text"
+      ]
+    },
+    "forbidden_work": [
+      "Do not split the sentence into multiple semantic headings.",
+      "Do not rasterize the title into an image as a substitute for live text.",
+      "Do not add an architecture-only decorative wrapper.",
+      "Do not silently change source text, sequence, emphasis scope or heading responsibility.",
+      "Do not expand scope to background or full Section layout.",
+      "Do not hard-lock desktop line break across unsupported mobile widths.",
+      "Do not let downstream stages silently change architecture_lock."
+    ]
+  },
+  "architecture_selection_summary": {
+    "rubric_id": "TEMP_EV4_ELEMENTOR_ARCHITECTURE_RUBRIC_v1",
+    "calibration_status": "EV4_POLICY_WEIGHTED_HEURISTIC_NOT_EMPIRICALLY_CALIBRATED",
+    "considered_candidates": [
+      {
+        "candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+        "family": "Single heading with internal presentational emphasis",
+        "decision_surface": "structure_relationship_and_semantic_order",
+        "score_by_criterion": {
+          "elementor_native_feasibility": {
+            "weight": 4,
+            "score": 3
+          },
+          "normal_flow_safety": {
+            "weight": 4,
+            "score": 4
+          },
+          "responsiveness": {
+            "weight": 4,
+            "score": 3
+          },
+          "editability": {
+            "weight": 3,
+            "score": 4
+          },
+          "structural_clarity": {
+            "weight": 2,
+            "score": 4
+          },
+          "overlay_containment": {
+            "weight": 2,
+            "score": "N/A"
+          },
+          "performance": {
+            "weight": 2,
+            "score": 3
+          },
+          "accessibility": {
+            "weight": 2,
+            "score": 4
+          },
+          "design_system_fit": {
+            "weight": 1,
+            "score": 3
+          },
+          "visual_precision": {
+            "weight": 1,
+            "score": 3
+          }
+        },
+        "raw_weighted_total": 80,
+        "applicable_raw_max": 115,
+        "normalized_total": 69.57,
+        "evidence_quality": {
+          "elementor_native_feasibility": "INFERRED_EVIDENCE",
+          "normal_flow_safety": "PARTIALLY_SUPPORTED_EVIDENCE",
+          "responsiveness": "INFERRED_EVIDENCE_NO_MOBILE_REFERENCE",
+          "editability": "PARTIALLY_SUPPORTED_EVIDENCE",
+          "visual_precision": "INFERRED_EVIDENCE"
+        },
+        "eligibility": "ELIGIBLE_WITH_BOUNDED_CE_INLINE_STYLING_CHECK"
+      },
+      {
+        "candidate_id": "C2_SPLIT_VISUAL_TITLE_INTO_MULTIPLE_ELEMENTS",
+        "family": "Separate heading/text elements arranged as apparent one title",
+        "eligibility": "REJECTED_SEMANTIC_AND_REFLOW_VETO",
+        "normalized_total": "NOT_RANKED_REJECTED",
+        "reason": "Introduces avoidable semantic fragmentation and fragile wrapping for one logical section heading"
+      },
+      {
+        "candidate_id": "C3_FLATTENED_TITLE_IMAGE",
+        "family": "Single static image substituting for text",
+        "eligibility": "REJECTED_EDITABILITY_AND_TEXT_SEMANTIC_VETO",
+        "normalized_total": "NOT_RANKED_REJECTED",
+        "reason": "Loses live text editing, text scaling and genuine heading semantics"
+      }
+    ],
+    "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+    "selected_normalized_total_or_incomplete": 69.57,
+    "selection_reason": "One semantic section heading precisely preserves copy and inline green emphasis, normal-flow readability and straightforward responsive behavior; alternative split or image approaches violate or materially weaken required text semantics.",
+    "rejected_or_conditional_alternatives": [
+      "C2 rejected: separate text nodes for one logical heading",
+      "C3 rejected: image-as-heading",
+      "V4 specific inline color method remains CE implementation, without altering single heading topology"
+    ],
+    "material_scoring_unknowns": [
+      "Reference is a cropped desktop visual, not a measured browser render; font family/weight/size, exact colors and available text width remain calibration evidence.",
+      "Exact per-substring color styling in the target Elementor V4 Heading element is not established by the official Heading documentation; CE must close implementation mechanism.",
+      "No Mobile/Tablet reference was provided; responsive score evidence-capped at 3."
+    ],
+    "self_audit_status": {
+      "status": "PASSED_INTERNAL_SECOND_PASS",
+      "rubric_total_weight": 25,
+      "applicable_weight_total": 23,
+      "normalized_denominator": 115,
+      "raw_weighted_total": 80,
+      "arithmetically_recomputed": true,
+      "not_independent_validator": true,
+      "notes": [
+        "Overlay criterion is N/A because no overlay exists or is proposed",
+        "No unsupported top score 5 used",
+        "Candidate comparison is policy heuristic not readiness or visual certification",
+        "C2/C3 rejected before numeric ranking by material semantic veto"
+      ]
+    }
+  },
+  "implementation_intent": {
+    "target": "One editable semantic Heading in existing Section parent with an inline accent on Intelligence.",
+    "preferred_primitive": "Editor V4 Heading element when content and internal accent can be represented faithfully; verify target capabilities before committing to an implementation method",
+    "native_capability_basis": "Official Elementor Editor V4 Heading element documentation confirms an editable Heading element and HTML Tag setting; it does not by itself prove partial-text color control.",
+    "official_docs": [
+      "https://elementor.com/help/heading-element/",
+      "https://elementor.com/help/inline-editing/"
+    ],
+    "implementation_freedom_reserved_to_CE": [
+      "Choose admissible content/inline styling representation preserving one semantic heading, possibly a scoped span/CSS when verified",
+      "Close sizing mechanism and selected typography/property owners",
+      "Decide reusable vs local style representation using role-compatible project evidence"
+    ],
+    "builder_boundary": "Builder implements only after CE closes constructability; no actual Elementor execution or production validation implied here.",
+    "visual_reference_intent": [
+      "Desktop title left aligned",
+      "dark navy main text",
+      "green Intelligence. including full stop",
+      "two observed desktop lines, visually after Now",
+      "reference crop does not prove root font, actual widths or exact CSS break mechanism"
+    ],
+    "background_scope": "OWNER_HANDLES_EXTERNALLY_NOT_INCLUDED"
+  },
+  "responsive_preflight": {
+    "status": "NOT_RUN_NO_REFERENCE",
+    "supplied_references": [
+      "Desktop cropped title image only"
+    ],
+    "preserved_invariants": [
+      "Same full copy, same reading order",
+      "single heading semantics",
+      "accent remains on Intelligence.",
+      "no forced clipped text"
+    ],
+    "preliminary_risk": "Hard desktop line break or width forced into smaller viewports could cause excessive lines or overflow; do not freeze it across viewports.",
+    "downstream_reopen_trigger": "A current responsive reference requires a different content identity, semantic/source order, interaction, or topology; ordinary reflow does not reopen architecture.",
+    "forbidden_scope": "No responsive breakpoint, route or mobile typography selected here."
+  },
+  "material_assumptions": [
+    {
+      "assumption": "The confirmed section title has an ordinary page heading parent and can use H2 as its initial semantic tag.",
+      "basis": "Owner explicitly confirmed it is a heading within a page section; official V4 Heading supports HTML tag selection.",
+      "downstream_effect": "Use provisional H2 without asserting full-page heading hierarchy.",
+      "reopen_trigger": "Current page outline demonstrates this section is nested under a different heading level."
+    },
+    {
+      "assumption": "The selected architecture applies to a desktop presentation like the supplied crop, not an entire page or section.",
+      "basis": "Owner explicitly excluded background and other Section work.",
+      "downstream_effect": "Parent dimensions and placement are outside Architect heading scope.",
+      "reopen_trigger": "Owner expands the scope to Section or page architecture."
+    }
+  ],
+  "unresolved_items": [
+    {
+      "unknown": "Actual page heading outline is not present; H2 is a conditional baseline, not independently proven.",
+      "resolution_attempts": [
+        "Owner confirmed section title role",
+        "Selected usual H2 baseline while preserving proper outline as hard constraint"
+      ],
+      "responsible_role": "ARCHITECT_ON_CONTRADICTION; CE_OR_BUILDER_MAY_REPORT_PAGE_OUTLINE_EVIDENCE",
+      "downstream_effect": "If a current heading hierarchy contradicts H2, only the tag decision is reopened; single title topology remains.",
+      "smallest_resume_input": "Current parent section heading hierarchy (page outline or relevant Navigator headings).",
+      "reopen_trigger": "Direct current page evidence shows another required section heading level."
+    },
+    {
+      "unknown": "Current target Editor V4 ability to style precisely one substring inside its Heading element was not proven by the available official docs.",
+      "resolution_attempts": [
+        "Checked current official Elementor Editor V4 Heading element and inline editing docs",
+        "Kept only the single semantic heading topology locked; no unproven inline UI mechanism asserted"
+      ],
+      "responsible_role": "CE",
+      "downstream_effect": "CE must select and justify a constructible per-substring accent mechanism; if impossible without topology/semantics change, return to Architect.",
+      "smallest_resume_input": "Target-version evidence that selected Heading content can contain/stylize an inline accent, or a feasible equally semantic text representation.",
+      "reopen_trigger": "CE establishes that required inline color cannot be represented without violating locked heading responsibility."
+    },
+    {
+      "unknown": "Target project identity and matching current design tokens are unconfirmed by the image alone.",
+      "resolution_attempts": [
+        "Loaded active NUURO Profile; used only global semantic guards, not nearest matching tokens",
+        "Did not equate screenshot green with a specific existing NUURO variable"
+      ],
+      "responsible_role": "CE_FOR_TARGET_TOKEN_OBSERVATION; ARCHITECT_ONLY_FOR_PROJECT_SCOPE_CHANGE",
+      "downstream_effect": "Use role-validated tokens if applicable; exact brand color/font binding remains unproven, but topology unaffected.",
+      "smallest_resume_input": "Current target site classes/variables or project identity only when binding materially affects the implementation.",
+      "reopen_trigger": "Current project evidence shows an authoritative conflicting established heading or color role."
+    }
+  ],
+  "advisor_consultation": {
+    "status": "NOT_CONSULTED",
+    "reason": "Small text-only architecture; native single-heading structure has clear semantic precedence over split or image families, with scoped CE capability check remaining.",
+    "formal_authority": "NONE",
+    "disposition": "NOT_APPLICABLE"
+  },
+  "project_context_use": {
+    "context_ref": {
+      "context_id": null,
+      "context_version": null
+    },
+    "status": "NOT_AVAILABLE",
+    "relevant_items": [],
+    "coherence_requirements": [
+      "Retain single section heading role",
+      "Avoid unsupported extrapolation from broader NUURO corpus to this detached screenshot",
+      "Compare new heading style only with actual current target/project evidence and applicable family rules"
+    ],
+    "material_exceptions": [
+      "No standalone EV4_PROJECT_DESIGN_CONTEXT current evidence was supplied; active NUURO Profile is available separately."
+    ],
+    "viewport_scope": "DESKTOP"
+  },
+  "personal_style_use": {
+    "contract_generation": "CURRENT_1_2_1",
+    "status": "EXACT_RULES_APPLIED",
+    "profile_id": "EV4-PSP-NUURO-20260731",
+    "profile_version": "1.0.1",
+    "profile_revision": 2,
+    "profile_sha256": "fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb",
+    "considered_rule_ids": [
+      "PSR-GLOBAL-TYPE-001",
+      "PSR-COLOR-ROLE-001",
+      "PSR-CLASS-POLICY-001"
+    ],
+    "applied_rule_bindings": [
+      {
+        "rule_id": "PSR-GLOBAL-TYPE-001",
+        "rule_semantic_sha256": "a15bbba15635aa873c45e9f8153581a26fab17c91b5554c96bab20512d613c0c",
+        "disposition": "APPLIED"
+      },
+      {
+        "rule_id": "PSR-COLOR-ROLE-001",
+        "rule_semantic_sha256": "2f73e1f4732ede6015c172968dcda14f3f11e57418ef97f841fc27268239495b",
+        "disposition": "APPLIED"
+      },
+      {
+        "rule_id": "PSR-CLASS-POLICY-001",
+        "rule_semantic_sha256": "199eae625302c641ed555a4ddc2dc35de34064feab3ad38ab6471bd56c04ce53",
+        "disposition": "APPLIED"
+      }
+    ],
+    "rejected_or_overridden_rule_bindings": [],
+    "binding_explanations": [
+      {
+        "rule_id": "PSR-GLOBAL-TYPE-001",
+        "effect": "No universal typography scale inferred; role-specific reference matching only"
+      },
+      {
+        "rule_id": "PSR-COLOR-ROLE-001",
+        "effect": "Green visual similarity does not establish identical project color variable; accent binding remains role-evidence-dependent"
+      },
+      {
+        "rule_id": "PSR-CLASS-POLICY-001",
+        "effect": "Existing class/variable reusable only if semantic role/ownership fits; no unsupported forced Global Class"
+      }
+    ],
+    "analogue_trace": null,
+    "local_overrides": [],
+    "style_extension_candidate_refs": [],
+    "style_revision_recommended": false,
+    "revision_trigger_refs": [],
+    "target_project_assumption": "Profile is active in this Architect project; screenshot alone does not prove target-project NUURO membership or any exact style token."
+  },
+  "resolved_content_projection": {
+    "status": "RESOLVED_ITEMS_PRESENT",
+    "items": [
+      {
+        "item_id": "heading-copy-001",
+        "kind": "COPY",
+        "resolved_value_or_asset_ref": "Smart Homes Are Connected. Now They Need Intelligence.",
+        "source_locator": "owner_supplied_image:/mnt/data/sshot-2.jpg plus Owner confirmed heading role",
+        "resolved_by_stage": "TEMP_ARCHITECT",
+        "scope": "SINGLE_SECTION_HEADING",
+        "freshness_or_version": "CURRENT_CONVERSATION_2026-10-18",
+        "downstream_use": "Use as exact editable heading content; keep punctuation and reading order."
+      }
+    ]
+  },
+  "resolved_state_projection": {
+    "status": "NO_CURRENT_RESOLUTION",
+    "entries": []
+  }
+}
