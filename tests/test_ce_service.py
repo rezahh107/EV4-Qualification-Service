@@ -177,4 +177,82 @@ class CEServiceTests(unittest.TestCase):
             self.assertTrue(any('RecursionError' in e for e in report['errors']))
             self.assertFalse((out/'official-ce-handoff.json').exists())
 
+
+    def test_canonical_result_falsification_matrix(self):
+        """Malformed or contradictory trusted results never escape or become PASS."""
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            self.make_submission(root)
+            accepted_out=root/'accepted'
+            self.assertEqual(run(root/'submissions',accepted_out,head_sha='h',service_sha='s',run_id='r'),0)
+            accepted=json.loads((accepted_out/'canonical-result.json').read_text(encoding='utf-8'))
+            official_bytes=(accepted_out/'official-ce-handoff.json').read_bytes()
+            # The pinned canonical CE receipt is admissible only with no blocking errors.
+            self.assertEqual(accepted['status'],'OFFICIAL_ACCEPTED')
+            self.assertEqual(accepted['errors'],[])
+            rejected={'status':'REJECTED',
+                      'validator_version':accepted['validator_version'],
+                      'errors':['CANDIDATE_STATUS_REQUIRED'],'official_handoff':None}
+            cases=[
+                ('top-level-array',[],0,official_bytes),
+                ('top-level-scalar',42,0,official_bytes),
+                ('top-level-null',None,0,official_bytes),
+                ('errors-null',{**accepted,'errors':None},0,official_bytes),
+                ('errors-string',{**accepted,'errors':'bad'},0,official_bytes),
+                ('errors-number',{**accepted,'errors':17},0,official_bytes),
+                ('errors-nonstring-entry',{**accepted,'errors':['x',{'not':'a string'}]},0,official_bytes),
+                ('invalid-version',{**accepted,'validator_version':None},0,official_bytes),
+                ('wrong-validator-version',{**accepted,'validator_version':'UNPINNED'},0,official_bytes),
+                ('accepted-with-errors',{**accepted,'errors':['CANONICAL_BLOCKER']},0,official_bytes),
+                ('accepted-exit-mismatch',accepted,1,official_bytes),
+                ('accepted-no-output',accepted,0,None),
+                ('accepted-output-mismatch',accepted,0,b'{}\\n'),
+                ('accepted-hash-mismatch',{**accepted,'official_handoff_sha256':'0'*64},0,official_bytes),
+                ('accepted-missing-payload',{**accepted,'official_handoff':None},0,official_bytes),
+                ('rejected-exit-mismatch',rejected,0,None),
+                ('rejected-has-file',rejected,1,official_bytes),
+                ('rejected-has-payload',{**rejected,'official_handoff':{}},1,None),
+                ('rejected-with-invalid-errors',{**rejected,'errors':None},1,None),
+            ]
+            for label,payload,exit_status,official in cases:
+                with self.subTest(label=label):
+                    out=root/('case-'+label)
+                    def simulated_validator(command,**kwargs):
+                        out.mkdir(parents=True,exist_ok=True)
+                        (out/'canonical-result.json').write_text(
+                            json.dumps(payload,ensure_ascii=False)+'\\n',encoding='utf-8')
+                        if official is not None:
+                            (out/'official-ce-handoff.json').write_bytes(official)
+                        return subprocess.CompletedProcess(command,exit_status,stdout='',stderr='')
+                    with patch('run_ce.subprocess.run',side_effect=simulated_validator):
+                        result_code=run(root/'submissions',out,head_sha='h',service_sha='s',run_id='r')
+                    report=json.loads((out/'result.json').read_text(encoding='utf-8'))
+                    self.assertEqual(result_code,2)
+                    self.assertEqual(report['state'],'EXECUTION_UNAVAILABLE')
+                    self.assertIsInstance(report['errors'],list)
+                    self.assertTrue(all(isinstance(error,str) for error in report['errors']))
+                    self.assertTrue(report['errors'])
+                    self.assertFalse((out/'official-ce-handoff.json').exists())
+
+    def test_canonical_rejection_with_empty_diagnostics_preserves_contract(self):
+        """A forbidden receipt may reject without a blocking error list."""
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); self.make_submission(root); out=root/'out'
+            result={'status':'REJECTED',
+                    'validator_version':'EV4_CE_QUALIFICATION_RUNNER_1.1.0',
+                    'errors':[],'official_handoff':None}
+            def simulated_validator(command,**kwargs):
+                out.mkdir(parents=True,exist_ok=True)
+                (out/'canonical-result.json').write_text(json.dumps(result),encoding='utf-8')
+                return subprocess.CompletedProcess(command,1,stdout='',stderr='')
+            with patch('run_ce.subprocess.run',side_effect=simulated_validator):
+                code=run(root/'submissions',out,head_sha='h',service_sha='s',run_id='r')
+            report=json.loads((out/'result.json').read_text(encoding='utf-8'))
+            self.assertEqual(code,1)
+            self.assertEqual(report['state'],'VALIDATOR_FAIL')
+            self.assertFalse((out/'official-ce-handoff.json').exists())
+
 if __name__=='__main__':unittest.main()
