@@ -206,6 +206,11 @@ class CEServiceTests(unittest.TestCase):
                 ('invalid-version',{**accepted,'validator_version':None},0,official_bytes),
                 ('wrong-validator-version',{**accepted,'validator_version':'UNPINNED'},0,official_bytes),
                 ('accepted-with-errors',{**accepted,'errors':['CANONICAL_BLOCKER']},0,official_bytes),
+                ('accepted-receipt-forbidden',{**accepted,'completion_receipt':{**accepted['completion_receipt'],'final_handoff':'FORBIDDEN'}},0,official_bytes),
+                ('accepted-receipt-error-count',{**accepted,'completion_receipt':{**accepted['completion_receipt'],'validation_error_count':1}},0,official_bytes),
+                ('accepted-qualification-status',{**accepted,'official_handoff':{**accepted['official_handoff'],'qualification':{**accepted['official_handoff']['qualification'],'status':'REJECTED'}}},0,official_bytes),
+                ('status-not-string',{**accepted,'status':['OFFICIAL_ACCEPTED']},0,official_bytes),
+                ('errors-absent',{k:v for k,v in accepted.items() if k!='errors'},0,official_bytes),
                 ('accepted-exit-mismatch',accepted,1,official_bytes),
                 ('accepted-no-output',accepted,0,None),
                 ('accepted-output-mismatch',accepted,0,b'{}'),
@@ -214,6 +219,7 @@ class CEServiceTests(unittest.TestCase):
                 ('rejected-exit-mismatch',rejected,0,None),
                 ('rejected-has-file',rejected,1,official_bytes),
                 ('rejected-has-payload',{**rejected,'official_handoff':{}},1,None),
+                ('rejected-has-hash',{**rejected,'official_handoff_sha256':'f'*64},1,None),
                 ('rejected-with-invalid-errors',{**rejected,'errors':None},1,None),
             ]
             for label,payload,exit_status,official in cases:
