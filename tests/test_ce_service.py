@@ -76,7 +76,7 @@ class CEServiceTests(unittest.TestCase):
             root=Path(d)
             submission=self.make_submission(root)
             # Valid JSON, below the 5 MB limit, but above Python's JSON recursion limit.
-            payload='[' * 2048 + '0' + ']' * 2048
+            payload='[' * 15000 + '0' + ']' * 15000
             self.assertLess(len(payload.encode('utf-8')),5_000_000)
             (submission/'architect-handoff.json').write_text(payload,encoding='utf-8')
             out=root/'out'
@@ -90,7 +90,7 @@ class CEServiceTests(unittest.TestCase):
     def test_deeply_nested_candidate_input_stays_not_executed(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d); submission=self.make_submission(root)
-            (submission/'ce-candidate.json').write_text('[' * 2048 + '0' + ']' * 2048,encoding='utf-8')
+            (submission/'ce-candidate.json').write_text('[' * 15000 + '0' + ']' * 15000,encoding='utf-8')
             out=root/'out'; out.mkdir()
             (out/'official-ce-handoff.json').write_text('stale handoff',encoding='utf-8')
             self.assertEqual(run(root/'submissions',out,head_sha='h',service_sha='s',run_id='r'),2)
@@ -167,7 +167,7 @@ class CEServiceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d); self.make_submission(root); out=root/'out'
             def invalid_result(command,**kwargs):
-                (out/'canonical-result.json').write_text('[' * 2048 + '0' + ']' * 2048,encoding='utf-8')
+                (out/'canonical-result.json').write_text('[' * 15000 + '0' + ']' * 15000,encoding='utf-8')
                 return subprocess.CompletedProcess(command,1,stdout='',stderr='')
             with patch('run_ce.subprocess.run',side_effect=invalid_result):
                 code=run(root/'submissions',out,head_sha='h',service_sha='s',run_id='r')
