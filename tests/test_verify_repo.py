@@ -43,7 +43,9 @@ class RepositoryContractTests(unittest.TestCase):
         temp, root = self.make_fixture()
         with temp:
             self.mutate_workflow(root, "      - main", "      - feature")
-            self.assert_failure_contains(root, "push trigger must target main")
+            self.assert_failure_contains(
+                root, "push branch filters do not effectively include main"
+            )
 
     def test_commented_pr_marker_does_not_count_as_trigger(self) -> None:
         temp, root = self.make_fixture()
@@ -166,6 +168,139 @@ class RepositoryContractTests(unittest.TestCase):
             self.assert_failure_contains(
                 root, "non-foundation dependency/import introduced"
             )
+
+    def test_verifier_job_if_false_is_rejected(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "    name: Verify repository contract\n",
+                "    name: Verify repository contract\n"
+                "    if: false\n",
+            )
+            self.assert_failure_contains(
+                root, "if condition that is not deterministically non-skipping"
+            )
+
+    def test_verifier_step_if_false_is_rejected(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "      - name: Verify repository contract\n"
+                "        run: python3 scripts/verify_repo.py",
+                "      - name: Verify repository contract\n"
+                "        if: false\n"
+                "        run: python3 scripts/verify_repo.py",
+            )
+            self.assert_failure_contains(
+                root, "if condition that is not deterministically non-skipping"
+            )
+
+    def test_verifier_step_continue_on_error_true_is_rejected(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "      - name: Verify repository contract\n"
+                "        run: python3 scripts/verify_repo.py",
+                "      - name: Verify repository contract\n"
+                "        continue-on-error: true\n"
+                "        run: python3 scripts/verify_repo.py",
+            )
+            self.assert_failure_contains(
+                root, "may mask verifier failure via continue-on-error"
+            )
+
+    def test_verifier_job_continue_on_error_true_is_rejected(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "    name: Verify repository contract\n",
+                "    name: Verify repository contract\n"
+                "    continue-on-error: true\n",
+            )
+            self.assert_failure_contains(
+                root, "may mask verifier failure via continue-on-error"
+            )
+
+    def test_main_then_negative_main_is_rejected(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "      - main\n",
+                "      - main\n"
+                "      - '!main'\n",
+            )
+            self.assert_failure_contains(
+                root, "push branch filters do not effectively include main"
+            )
+
+    def test_event_filters_that_can_bypass_required_runs_fail_closed(self) -> None:
+        mutations = (
+            (
+                "  pull_request:\n  push:",
+                "  pull_request:\n"
+                "    paths:\n"
+                "      - docs/**\n"
+                "  push:",
+                "pull_request filters/configuration are unsupported",
+            ),
+            (
+                "      - main\n  workflow_dispatch:",
+                "      - main\n"
+                "    paths:\n"
+                "      - docs/**\n"
+                "  workflow_dispatch:",
+                "push filtering/configuration is unsupported",
+            ),
+        )
+
+        for old, new, expected in mutations:
+            with self.subTest(expected=expected):
+                temp, root = self.make_fixture()
+                with temp:
+                    self.mutate_workflow(root, old, new)
+                    self.assert_failure_contains(root, expected)
+
+    def test_unrelated_optional_job_controls_are_not_restricted(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "jobs:\n",
+                "jobs:\n"
+                "  optional:\n"
+                "    if: false\n"
+                "    continue-on-error: true\n"
+                "    runs-on: ubuntu-latest\n"
+                "    steps:\n"
+                "      - run: echo optional\n\n",
+            )
+            self.assertEqual(verify_repo.verify_repository(root), [])
+
+    def test_literal_true_and_false_execution_controls_are_supported(self) -> None:
+        temp, root = self.make_fixture()
+        with temp:
+            self.mutate_workflow(
+                root,
+                "    name: Verify repository contract\n",
+                "    name: Verify repository contract\n"
+                "    if: true\n"
+                "    continue-on-error: false\n",
+            )
+            self.mutate_workflow(
+                root,
+                "      - name: Verify repository contract\n"
+                "        run: python3 scripts/verify_repo.py",
+                "      - name: Verify repository contract\n"
+                "        if: true\n"
+                "        continue-on-error: false\n"
+                "        run: python3 scripts/verify_repo.py",
+            )
+            self.assertEqual(verify_repo.verify_repository(root), [])
 
 
 if __name__ == "__main__":

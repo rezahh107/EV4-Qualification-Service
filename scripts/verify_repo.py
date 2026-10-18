@@ -64,6 +64,14 @@ TEXT_REQUIREMENTS = {
 }
 
 ALLOWED_VERIFIER_IMPORTS = {"__future__", "ast", "pathlib", "sys"}
+PROVEN_TRUE_SCALARS = {"true", "${{ true }}"}
+PROVEN_FALSE_SCALARS = {"false", "${{ false }}"}
+SAFE_LITERAL_BRANCH_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789"
+    "._/-"
+)
 
 
 class WorkflowConfigError(ValueError):
@@ -284,6 +292,95 @@ def parse_workflow_subset(source: str) -> dict[str, object]:
     return parsed
 
 
+def _is_proven_non_skipping_condition(value: object) -> bool:
+    return isinstance(value, str) and value.strip() in PROVEN_TRUE_SCALARS
+
+
+def _is_proven_non_masking_continue_on_error(value: object) -> bool:
+    return isinstance(value, str) and value.strip() in PROVEN_FALSE_SCALARS
+
+
+def _mapping_execution_controls_safe(
+    mapping: dict[str, object],
+    *,
+    scope: str,
+) -> list[str]:
+    failures: list[str] = []
+
+    if "if" in mapping and not _is_proven_non_skipping_condition(
+        mapping.get("if")
+    ):
+        failures.append(
+            f"{WORKFLOW_PATH}: {scope} has an if condition that is not "
+            "deterministically non-skipping"
+        )
+
+    if "continue-on-error" in mapping and not (
+        _is_proven_non_masking_continue_on_error(
+            mapping.get("continue-on-error")
+        )
+    ):
+        failures.append(
+            f"{WORKFLOW_PATH}: {scope} may mask verifier failure via "
+            "continue-on-error"
+        )
+
+    return failures
+
+
+def _literal_branch_pattern(pattern: object) -> tuple[bool, str]:
+    if not isinstance(pattern, str) or not pattern:
+        raise WorkflowConfigError("branch patterns must be non-empty strings")
+
+    excluded = pattern.startswith("!")
+    branch = pattern[1:] if excluded else pattern
+    if not branch:
+        raise WorkflowConfigError("empty negative branch pattern is unsupported")
+    if any(char not in SAFE_LITERAL_BRANCH_CHARS for char in branch):
+        raise WorkflowConfigError(
+            f"unsupported branch pattern {pattern!r}; only literal branch "
+            "names are supported by the foundation verifier"
+        )
+    return excluded, branch
+
+
+def _push_includes_main(push: dict[str, object]) -> list[str]:
+    failures: list[str] = []
+    unsupported = set(push) - {"branches"}
+    if unsupported:
+        failures.append(
+            f"{WORKFLOW_PATH}: push filtering/configuration is unsupported "
+            "for required main validation: "
+            + ", ".join(sorted(unsupported))
+        )
+        return failures
+
+    branches = push.get("branches")
+    if not isinstance(branches, list) or not branches:
+        failures.append(
+            f"{WORKFLOW_PATH}: push trigger must define supported branches "
+            "that include main"
+        )
+        return failures
+
+    main_included = False
+    try:
+        for pattern in branches:
+            excluded, branch = _literal_branch_pattern(pattern)
+            if branch == "main":
+                main_included = not excluded
+    except WorkflowConfigError as exc:
+        failures.append(f"{WORKFLOW_PATH}: {exc}")
+        return failures
+
+    if not main_included:
+        failures.append(
+            f"{WORKFLOW_PATH}: push branch filters do not effectively include main"
+        )
+
+    return failures
+
+
 def workflow_contract_failures(source: str) -> list[str]:
     failures: list[str] = []
     try:
@@ -301,10 +398,28 @@ def workflow_contract_failures(source: str) -> list[str]:
         failures.append(
             f"{WORKFLOW_PATH}: active pull_request trigger is required"
         )
+    else:
+        pull_request = triggers.get("pull_request")
+        if pull_request is not None:
+            if not isinstance(pull_request, dict) or pull_request:
+                failures.append(
+                    f"{WORKFLOW_PATH}: pull_request filters/configuration are "
+                    "unsupported for required PR validation"
+                )
+
     if "workflow_dispatch" not in triggers:
         failures.append(
             f"{WORKFLOW_PATH}: active workflow_dispatch trigger is required"
         )
+    else:
+        workflow_dispatch = triggers.get("workflow_dispatch")
+        if workflow_dispatch is not None and not isinstance(
+            workflow_dispatch, dict
+        ):
+            failures.append(
+                f"{WORKFLOW_PATH}: workflow_dispatch configuration must be "
+                "a mapping when present"
+            )
 
     push = triggers.get("push")
     if not isinstance(push, dict):
@@ -312,11 +427,7 @@ def workflow_contract_failures(source: str) -> list[str]:
             f"{WORKFLOW_PATH}: active push trigger with branches is required"
         )
     else:
-        branches = push.get("branches")
-        if not isinstance(branches, list) or "main" not in branches:
-            failures.append(
-                f"{WORKFLOW_PATH}: push trigger must target main"
-            )
+        failures.extend(_push_includes_main(push))
 
     permissions = workflow.get("permissions")
     if (
@@ -333,6 +444,8 @@ def workflow_contract_failures(source: str) -> list[str]:
         return failures
 
     verifier_step_found = False
+    safe_verifier_path_found = False
+
     for job_name, job in jobs.items():
         if not isinstance(job, dict):
             failures.append(
@@ -340,38 +453,76 @@ def workflow_contract_failures(source: str) -> list[str]:
             )
             continue
 
-        effective_permissions = permissions
-        if "permissions" in job:
-            job_permissions = job.get("permissions")
-            if not isinstance(job_permissions, dict):
-                failures.append(
-                    f"{WORKFLOW_PATH}: job {job_name!r} permissions must be a mapping"
-                )
-                continue
-            effective_permissions = job_permissions
-
         steps = job.get("steps")
         if not isinstance(steps, list):
             continue
 
-        for step in steps:
-            if not isinstance(step, dict):
-                continue
-            if step.get("run") == CANONICAL_VERIFY_COMMAND:
-                verifier_step_found = True
-                if (
-                    not isinstance(effective_permissions, dict)
-                    or effective_permissions.get("contents") != "read"
-                ):
-                    failures.append(
-                        f"{WORKFLOW_PATH}: canonical verifier job must have "
-                        "effective contents: read permission"
-                    )
+        verifier_steps = [
+            step
+            for step in steps
+            if isinstance(step, dict)
+            and step.get("run") == CANONICAL_VERIFY_COMMAND
+        ]
+        if not verifier_steps:
+            continue
+
+        verifier_step_found = True
+        job_failures: list[str] = []
+
+        effective_permissions = permissions
+        if "permissions" in job:
+            job_permissions = job.get("permissions")
+            if not isinstance(job_permissions, dict):
+                job_failures.append(
+                    f"{WORKFLOW_PATH}: job {job_name!r} permissions must be a mapping"
+                )
+            else:
+                effective_permissions = job_permissions
+
+        if (
+            not isinstance(effective_permissions, dict)
+            or effective_permissions.get("contents") != "read"
+        ):
+            job_failures.append(
+                f"{WORKFLOW_PATH}: canonical verifier job must have "
+                "effective contents: read permission"
+            )
+
+        job_failures.extend(
+            _mapping_execution_controls_safe(
+                job,
+                scope=f"canonical verifier job {job_name!r}",
+            )
+        )
+
+        if "needs" in job:
+            job_failures.append(
+                f"{WORKFLOW_PATH}: canonical verifier job {job_name!r} "
+                "has unsupported execution dependency 'needs'"
+            )
+
+        for step in verifier_steps:
+            step_failures = list(job_failures)
+            step_failures.extend(
+                _mapping_execution_controls_safe(
+                    step,
+                    scope=f"canonical verifier step in job {job_name!r}",
+                )
+            )
+            if step_failures:
+                failures.extend(step_failures)
+            else:
+                safe_verifier_path_found = True
 
     if not verifier_step_found:
         failures.append(
             f"{WORKFLOW_PATH}: an executable step must run exactly "
             f"{CANONICAL_VERIFY_COMMAND!r}"
+        )
+    elif not safe_verifier_path_found:
+        failures.append(
+            f"{WORKFLOW_PATH}: no canonical verifier execution path is "
+            "proven non-skipping and failure-propagating"
         )
 
     return failures
@@ -428,7 +579,7 @@ def main() -> int:
 
     print("REPOSITORY_CONTRACT: PASS")
     print(f"checked_files={len(REQUIRED_FILES)}")
-    print("scope=foundation_structure_and_active_workflow_contract")
+    print("scope=foundation_structure_and_effective_workflow_contract")
     print("ev4_package_validation=NOT_IMPLEMENTED")
     return 0
 
