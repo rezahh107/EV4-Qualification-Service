@@ -3,7 +3,7 @@
 External execution and qualification service for EV4 packages. Its purpose is to let LLM-driven EV4 workflows use canonical executable validators even when the model itself cannot run Python or other local tooling.
 
 > **Agent entrypoint:** read [`AGENTS.md`](AGENTS.md) first.  
-> **Foundation status:** repository contract and self-check CI are implemented; EV4 role/package validators and validated-artifact production are not implemented yet.
+> **Foundation status:** repository contract and self-check CI remain implemented; the first real CE validator now has a dedicated Actions runner (see [CE validation](docs/CE_VALIDATION.md)).
 
 ## Why this repository exists
 
@@ -46,7 +46,7 @@ scripts/
     repository-contract.yml
 ```
 
-The service-specific validator registry/workflows will be added only when their contracts are qualified. This foundation does not create placeholder validators or claim that EV4 packages are already being qualified here.
+The first real validator uses the unchanged EV4 CE code; future validators are out of scope. Actual acceptance requires an observed, matching GitHub Actions run and result artifact.
 
 ## Canonical repository verification
 
@@ -102,7 +102,7 @@ Intentionally not added yet:
 - dependency automation — there are no managed runtime dependencies yet;
 - release automation — no distributable service release exists yet;
 - license — licensing intent has not been supplied by the Owner;
-- EV4 validators — must be introduced with their actual contracts, not as placeholders.
+- additional EV4 validators — must be introduced with their actual contracts, not as placeholders.
 
 ## Foundation provenance
 
@@ -117,3 +117,7 @@ The applied principle is outcome-oriented rather than template-copying:
 North Star:
 
 `SELF-EXPLAINING + SELF-VALIDATING`
+
+## First operational CE validator
+
+Submit a PR containing `submissions/<id>/architect-handoff.json` and `submissions/<id>/ce-candidate.json` only as data. After the trusted service is installed on `main`, the LLM adds `/validate-ce` as an Owner comment to the PR. The read-only `issue_comment` job then runs the original `qualify_ce_handoff.py` from trusted default-branch code, isolated from PR data. A result artifact includes the input HEAD and raw SHA-256 identities, trusted service SHA and run identity. Only an actual `VALIDATOR_PASS` produces `official-ce-handoff.json`; `VALIDATOR_FAIL` includes canonical error codes; no execution cannot be reported as success. See [instructions](docs/CE_VALIDATION.md).

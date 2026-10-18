@@ -1,0 +1,74 @@
+name: CE Canonical Validation
+
+on:
+  pull_request:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  service-regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Exercise real canonical CE PASS and FAIL fixtures
+        env:
+          CE_FIXTURE_EVIDENCE_DIR: fixture-artifacts
+        run: python3 -m unittest discover -s tests -p 'test_ce_service.py' -v
+      - name: Upload CE fixture evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ce-fixture-evidence-${{ github.sha }}
+          path: fixture-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+  qualify-submission:
+    # issue_comment workflows run from the default branch; candidate code is never executed.
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '/validate-ce' && github.event.comment.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted service code from default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Resolve submitted PR's exact head SHA from GitHub API
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" > /tmp/ce-pr.json
+          python3 scripts/resolve_pr.py /tmp/ce-pr.json
+      - name: Checkout untrusted candidate data separately, never execute it
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ steps.resolve.outputs.head_repo }}
+          ref: ${{ steps.resolve.outputs.head_sha }}
+          path: incoming
+          persist-credentials: false
+      - name: Restore pinned validator source
+        run: python3 scripts/restore_ce_source.py
+      - name: Qualify submitted CE data
+        env:
+          INPUT_SHA: ${{ steps.resolve.outputs.head_sha }}
+          SERVICE_SHA: ${{ github.sha }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: python3 scripts/run_ce.py --submissions incoming/submissions --output ce-results
+      - name: Upload result including errors on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ce-validation-pr-${{ github.event.issue.number }}-head-${{ steps.resolve.outputs.head_sha }}-attempt-${{ github.run_attempt }}
+          path: ce-results/
+          if-no-files-found: warn
+          retention-days: 30

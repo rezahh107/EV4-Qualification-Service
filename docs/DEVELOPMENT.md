@@ -8,7 +8,7 @@ Foundation verification requires:
 - Python 3.11 or newer;
 - no third-party Python packages.
 
-The repository currently has no application dependency installation step.
+The repository continues to require only Python's standard library. The first CE validator is restored from the pinned, hash-verified source subset using `python3 scripts/restore_ce_source.py`.
 
 ## Setup
 
@@ -31,7 +31,7 @@ python3 scripts/verify_repo.py
 
 This is the canonical full repository-contract verification command at foundation stage.
 
-It verifies the repository-owned foundation surfaces and the active GitHub Actions workflow contract. It does **not** qualify EV4 packages.
+It verifies the repository-owned foundation surfaces and the active GitHub Actions workflow contract. It verifies the repository contract, **not** the first CE candidate; see [`CE_VALIDATION.md`](CE_VALIDATION.md) for the separate canonical validator.
 
 Focused falsification/regression tests for the verifier are:
 
@@ -97,3 +97,7 @@ Before claiming a repository change complete:
 3. inspect the exact CI run if CI evidence is part of the claim;
 4. keep `README.md`, `AGENTS.md`, and docs synchronized when contracts change;
 5. do not call unavailable execution `PASS`.
+
+## CE service regression and execution
+
+The original CE validator is exercised by `python3 -m unittest discover -s tests -p 'test_ce_service.py'`, covering real PASS and FAIL fixtures; [`CE_VALIDATION.md`](CE_VALIDATION.md) defines PR submission and artifact lookup. `repository-contract.yml` continues to run the existing canonical self-verification command.

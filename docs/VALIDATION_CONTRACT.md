@@ -135,11 +135,4 @@ Do not add repeated retries, mandatory human intervention, or blocking integrati
 
 ## Current implementation boundary
 
-At foundation v1:
-
-- repository self-verification exists;
-- repository-contract CI exists;
-- EV4 package/role validators do not yet exist;
-- no production validated-artifact contract is claimed.
-
-Do not upgrade those absent capabilities based on this document alone.
+The repository retains its foundation self-verification and repository-contract CI. The first real CE validator path now exists as a separate Actions service. See [`CE_VALIDATION.md`](CE_VALIDATION.md) for exact input transport, trusted code boundary, result/official-handoff rules and the limitation that PR development tests do not prove post-merge submission qualification.
