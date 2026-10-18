@@ -161,4 +161,20 @@ class CEServiceTests(unittest.TestCase):
             self.assertEqual(report['state'],'EXECUTION_UNAVAILABLE')
             self.assertFalse((out/'official-ce-handoff.json').exists())
 
+
+    def test_deeply_nested_canonical_result_is_execution_unavailable(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); self.make_submission(root); out=root/'out'
+            def invalid_result(command,**kwargs):
+                (out/'canonical-result.json').write_text('[' * 2048 + '0' + ']' * 2048,encoding='utf-8')
+                return subprocess.CompletedProcess(command,1,stdout='',stderr='')
+            with patch('run_ce.subprocess.run',side_effect=invalid_result):
+                code=run(root/'submissions',out,head_sha='h',service_sha='s',run_id='r')
+            report=json.loads((out/'result.json').read_text(encoding='utf-8'))
+            self.assertEqual(code,2)
+            self.assertEqual(report['state'],'EXECUTION_UNAVAILABLE')
+            self.assertTrue(any('RecursionError' in e for e in report['errors']))
+            self.assertFalse((out/'official-ce-handoff.json').exists())
+
 if __name__=='__main__':unittest.main()
