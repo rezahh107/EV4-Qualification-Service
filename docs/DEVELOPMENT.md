@@ -31,7 +31,15 @@ python3 scripts/verify_repo.py
 
 This is the canonical full repository-contract verification command at foundation stage.
 
-It verifies the repository-owned foundation surfaces and CI alignment. It does **not** qualify EV4 packages.
+It verifies the repository-owned foundation surfaces and the active GitHub Actions workflow contract. It does **not** qualify EV4 packages.
+
+Focused falsification/regression tests for the verifier are:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
+```
+
+The focused tests mutate isolated fixture copies; they do not rewrite the working repository.
 
 ## CI
 
@@ -40,6 +48,8 @@ It verifies the repository-owned foundation surfaces and CI alignment. It does *
 - pull requests;
 - pushes to `main`;
 - manual workflow dispatch.
+
+CI also runs the focused verifier falsification/regression tests before the canonical verifier.
 
 The workflow uses read-only repository contents permission.
 
@@ -83,6 +93,7 @@ Then implement repository-owned validator code and make CI a thin wrapper around
 Before claiming a repository change complete:
 
 1. run the canonical verifier when executable access is available;
-2. inspect the exact CI run if CI evidence is part of the claim;
-3. keep `README.md`, `AGENTS.md`, and docs synchronized when contracts change;
-4. do not call unavailable execution `PASS`.
+2. run focused verifier tests when verifier behavior changes;
+3. inspect the exact CI run if CI evidence is part of the claim;
+4. keep `README.md`, `AGENTS.md`, and docs synchronized when contracts change;
+5. do not call unavailable execution `PASS`.
