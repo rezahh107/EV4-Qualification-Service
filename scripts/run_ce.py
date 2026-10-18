@@ -35,6 +35,7 @@ def run(submissions: Path, output: Path, *, head_sha: str, service_sha: str, run
               'input_commit':head_sha, 'trusted_service_commit':service_sha, 'pr_number':os.environ.get('PR_NUMBER',''),
               'workflow_run_id':run_id, 'errors':[], 'inputs':{}}
     exit_code=2
+    input_preflight_complete=False
     try:
         if submissions.is_symlink():
             raise ValueError('SUBMISSIONS_ROOT_SYMLINK_FORBIDDEN')
@@ -50,6 +51,7 @@ def run(submissions: Path, output: Path, *, head_sha: str, service_sha: str, run
         for label,p in [('architect',architect),('candidate',candidate)]:
             safe_file(p)
             report['inputs'][label]={'sha256':digest(p),'bytes':p.stat().st_size}
+        input_preflight_complete=True
         # Trusted source is verified at restore time; the submission cannot supply it.
         for label,p in [('validator',VALIDATOR),('profile',PROFILE),('contract',CONTRACT)]:
             if not p.is_file():
@@ -79,9 +81,9 @@ def run(submissions: Path, output: Path, *, head_sha: str, service_sha: str, run
             exit_code=1
         else:
             raise RuntimeError('VALIDATOR_STATUS_EXIT_OUTPUT_DISAGREEMENT')
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, RecursionError) as exc:
         report['errors'].append(type(exc).__name__+':'+str(exc))
-        report['state']='NOT_EXECUTED'
+        report['state']='EXECUTION_UNAVAILABLE' if input_preflight_complete else 'NOT_EXECUTED'
     except (RuntimeError, subprocess.TimeoutExpired) as exc:
         report['errors'].append(type(exc).__name__+':'+str(exc))
         report['state']='EXECUTION_UNAVAILABLE'
