@@ -9,7 +9,8 @@ The **trusted service revision** owns the original EV4 `validators/qualify_ce_ha
    - `architect-handoff.json` — upstream Architect handoff (the original `fixtures/chain/ARCHITECT_HANDOFF.json` illustrates the format).
    - `ce-candidate.json` — the pending CE candidate (the original `fixtures/chain/CE_CANDIDATE_HANDOFF.json` illustrates the format).
 3. Open a PR **into main** from this submission branch. No need for `workflow_dispatch`. The GitHub Actions `CE Canonical Validation` workflow handles the submission after the service PR has been merged into `main` (not before).
-4. Find the `pull_request_target` run for that PR/head SHA under **Actions → CE Canonical Validation**, and download its `ce-validation-pr-…-head-…-attempt-…` artifact. Match the SHA, PR number, run ID/attempt and `trusted_service_commit` in `result.json` before relying on it.
+4. Using the same GitHub connector, add the exact comment `/validate-ce` to the PR. Only the repository Owner's trigger comment activates the trusted `issue_comment` workflow from default `main`; this avoids `workflow_dispatch` and public-repository `pull_request_target` policy restrictions.
+5. Find that `issue_comment` run under **Actions → CE Canonical Validation**, and download its `ce-validation-pr-…-head-…-attempt-…` artifact. Match the SHA, PR number, run ID/attempt and `trusted_service_commit` in `result.json` before relying on it.
 
 Profile and project-style contract are **not supplied by the candidate**. The pinned source files are deliberately loaded from the trusted bundle, byte-for-byte. The canonical validator also reads the pinned Architect coverage adapter and style precedence registry. Changing those requires a separately reviewed trusted-service PR.
 
@@ -26,9 +27,9 @@ GitHub Actions run-level failures before artifact upload have **no validator PAS
 
 ## Trust and test boundaries
 
-The `pull_request_target` job checks out trusted **base SHA** as executable service code, and checks out the **exact submission head SHA** into a separate `incoming/` data-only directory. The candidate branch's workflow/validator files are **never executed** as qualification authority. The job has `contents: read`, checkout does not persist credentials, and untrusted files have bounded size.
+The trusted `issue_comment` job checks out service code from the **default branch**, resolves the submitted PR head via the authenticated GitHub API, and checks out that **exact submission head SHA** into a separate `incoming/` data-only directory. The candidate branch's workflow/validator files are **never executed** as qualification authority. The job has `contents: read`, checkout does not persist credentials, and untrusted files have bounded size.
 
-The service implementation PR itself is tested with a separate `pull_request`-only regression job; that developmental test exercises the canonical PASS fixture and a deliberately invalid candidate, but **is not independent submission qualification** until the trusted workflow is installed on `main`. Existing repository-contract CI is retained.
+The service implementation PR itself is tested with a separate `pull_request`-only regression job (which uploads diagnostic artifacts for the valid and invalid fixtures); that developmental test exercises the canonical PASS fixture and a deliberately invalid candidate, but **is not independent submission qualification** until the trusted workflow is installed on `main`. Existing repository-contract CI is retained.
 
 Locally, for repository maintainers only:
 

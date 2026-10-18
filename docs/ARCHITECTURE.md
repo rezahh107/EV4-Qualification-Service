@@ -124,4 +124,4 @@ Today that may be GitHub Actions triggered by a PR. Tomorrow it may be a direct 
 
 ## First admitted CE implementation
 
-The CE execution path is documented in [`CE_VALIDATION.md`](CE_VALIDATION.md): the PR head supplies only data while the `pull_request_target` workflow and validator come from the trusted base commit. The separate `pull_request` job tests changes to the service itself; it must not be mistaken for independent submission qualification.
+The CE execution path is documented in [`CE_VALIDATION.md`](CE_VALIDATION.md): the PR head supplies only data while the `issue_comment` workflow and validator come from the trusted default-branch commit. The separate `pull_request` job tests changes to the service itself; it must not be mistaken for independent submission qualification.

@@ -32,7 +32,7 @@ def run(submissions: Path, output: Path, *, head_sha: str, service_sha: str, run
     (output / 'canonical-result.json').unlink(missing_ok=True)
     report = {'schema':'ev4-ce-ci-result@1', 'workflow_run_attempt':os.environ.get('GITHUB_RUN_ATTEMPT',''), 'state':'NOT_EXECUTED',
               'validator':'EV4_CE_QUALIFICATION_RUNNER_1.1.0',
-              'input_commit':head_sha, 'trusted_service_commit':service_sha,
+              'input_commit':head_sha, 'trusted_service_commit':service_sha, 'pr_number':os.environ.get('PR_NUMBER',''),
               'workflow_run_id':run_id, 'errors':[], 'inputs':{}}
     exit_code=2
     try:

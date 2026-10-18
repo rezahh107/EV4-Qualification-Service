@@ -1,6 +1,7 @@
 """End-to-end regression against the original pinned EV4 CE validator fixture."""
 from __future__ import annotations
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -36,6 +37,8 @@ class CEServiceTests(unittest.TestCase):
             self.assertEqual(result['canonical_status'],'OFFICIAL_ACCEPTED')
             self.assertTrue((root/'out'/'official-ce-handoff.json').is_file())
             self.assertEqual(result['official_handoff_sha256'], __import__('hashlib').sha256((root/'out'/'official-ce-handoff.json').read_bytes()).hexdigest())
+            if os.environ.get('CE_FIXTURE_EVIDENCE_DIR'):
+                shutil.copytree(root/'out',Path(os.environ['CE_FIXTURE_EVIDENCE_DIR'])/'known-valid',dirs_exist_ok=True)
 
     def test_real_validator_rejects_changed_candidate_without_handoff(self):
         with tempfile.TemporaryDirectory() as d:
@@ -48,6 +51,8 @@ class CEServiceTests(unittest.TestCase):
             self.assertEqual(result['state'],'VALIDATOR_FAIL')
             self.assertIn('CANDIDATE_STATUS_REQUIRED',result['errors'])
             self.assertFalse((root/'out'/'official-ce-handoff.json').exists())
+            if os.environ.get('CE_FIXTURE_EVIDENCE_DIR'):
+                shutil.copytree(root/'out',Path(os.environ['CE_FIXTURE_EVIDENCE_DIR'])/'deliberately-invalid',dirs_exist_ok=True)
 
     def test_missing_inputs_are_not_claimed_as_validator_fail(self):
         with tempfile.TemporaryDirectory() as d:
