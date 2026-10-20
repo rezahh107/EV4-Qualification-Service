@@ -98,7 +98,9 @@ def wp_env_profile(p):
 
 
 def test_hash():
-    paths = [ROOT / 'bin/lab.py', ROOT / 'bin/validate-source.mjs', ROOT / 'playwright.config.mjs',
+    paths = [ROOT / 'bin/lab.py', ROOT / 'bin/validate-source.mjs',
+             ROOT / 'bin/origin-contract.spec.mjs', ROOT / 'bin/origin-playwright.config.mjs',
+             ROOT / 'predicate-contract.json', ROOT / 'playwright.config.mjs',
              ROOT / 'package.json', CAT, *sorted((ROOT / 'tests').glob('*.mjs'))]
     return digest(b''.join(
         p.relative_to(ROOT).as_posix().encode() + b'\0' + p.read_bytes()

@@ -158,3 +158,20 @@ structured `observation_state`, `product_assertion_state` and SHA-256 per
 executed scenario, while keeping the existing `assertion_origin` indicator.
 A lab CI failure may still truthfully represent the measured product contrast
 violation and is not necessarily a test-harness outage.
+
+### Predicate and receipt-authority identity
+
+The reviewed predicate AST signatures for all 15 executable scenarios are
+pinned in `predicate-contract.json` and verified by `validate-source.mjs`.
+Any deleted, weakened or added predicate must be admitted through a reviewed
+manifest successor; whitespace/comment-only edits do not change the signature.
+The `qualification.mjs` and `observation.mjs` helper Git Blob identities are
+also exact-bound in the same source contract so a test cannot redefine evidence
+receipt production. The predicate manifest, helpers and isolated real-Playwright
+origin-falsification tests contribute to the result's test fingerprint.
+
+The isolated `bin/origin-contract.spec.mjs` suite uses actual native Playwright
+value matchers and intentionally expected failing steps to exercise complete
+negative snapshots, unavailable observations, unexpected callback exceptions,
+negated matcher outcomes and successful data-only predicates. These test
+fixtures are unit evidence, not WordPress product evidence.
