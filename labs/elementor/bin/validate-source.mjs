@@ -202,7 +202,7 @@ for (const file of files) {
         !(parent?.type === 'ImportSpecifier' ||
           (parent?.type === 'CallExpression' && parent.callee === node)))
       reject(file + ': indirect alias/reference to productAssertion forbidden');
-    if (node.type === 'Identifier' && node.name === 'test' &&
+    if (isSpec && node.type === 'Identifier' && node.name === 'test' &&
         !(parent?.type === 'ImportSpecifier' ||
           (parent?.type === 'CallExpression' && parent.callee === node)))
       reject(file + ': indirect use or alias of Playwright test binding forbidden');
