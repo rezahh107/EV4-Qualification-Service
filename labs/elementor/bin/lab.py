@@ -263,8 +263,15 @@ def classify_playwright(report, result):
                            if isinstance(e, dict)][:2]})
         for child in suite.get('suites', []):
             visit(child)
-    for suite in report.get('suites', []):
-        visit(suite)
+    try:
+        for suite in report.get('suites', []):
+            visit(suite)
+    except (ValueError, TypeError) as exc:
+        result['assertion_origin_error'] = str(exc)[:1500]
+        for item in result['scenarios']:
+            if item['test_identity']:
+                item['status'] = 'NOT_PROVEN'
+        return 0
     for item in result['scenarios']:
         if item['test_identity'] in observed:
             status, evidence = observed[item['test_identity']]
@@ -325,7 +332,9 @@ def finalize_fixture_evidence(result, storage):
 
 def finish(result):
     statuses = [s['status'] for s in result['scenarios']]
-    if not result['provenance_verified']:
+    if result.get('source_contract_error') or result.get('assertion_origin_error'):
+        result['execution'] = 'NOT_PROVEN'
+    elif not result['provenance_verified']:
         result['execution'] = 'NOT_PROVEN'
     elif result['installed'] is None:
         result['execution'] = 'ENVIRONMENT_UNAVAILABLE'
