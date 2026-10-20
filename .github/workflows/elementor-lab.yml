@@ -1,0 +1,57 @@
+name: Elementor Compatibility Lab
+
+on:
+  pull_request:
+    paths:
+      - 'labs/elementor/**'
+      - '.github/workflows/elementor-lab.yml'
+  workflow_dispatch:
+    inputs:
+      capability:
+        description: 'A-O capability domain, or all'
+        required: true
+        type: choice
+        default: all
+        options: [all, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]
+      profile:
+        description: 'Checked-in, sanitized profile file'
+        required: true
+        type: choice
+        default: core-4.3.5
+        options: [core-4.3.5]
+
+permissions:
+  contents: read
+
+jobs:
+  laboratory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: labs/elementor
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install pinned direct test tooling
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate lab runner and evidence boundary
+        run: python3 -m unittest discover -s bin -p 'test_*.py' -v
+      - name: Run real WordPress + Elementor lab
+        env:
+          CAPABILITY: ${{ github.event_name == 'workflow_dispatch' && inputs.capability || 'all' }}
+        run: python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability "$CAPABILITY"
+      - name: Publish evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: elementor-lab-${{ github.run_id }}-${{ github.run_attempt }}
+          path: labs/elementor/artifacts/
+          if-no-files-found: warn
+          retention-days: 30

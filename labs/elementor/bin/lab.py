@@ -1,0 +1,297 @@
+#!/usr/bin/env python3
+"""Isolated released-Elementor qualification. Never convert unavailable to PASS."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+from urllib.request import urlopen
+
+ROOT = Path(__file__).resolve().parents[1]
+ART = ROOT / 'artifacts'
+CAT = ROOT / 'catalog.json'
+DOMAINS = 'ABCDEFGHIJKLMNO'
+
+
+def digest(obj):
+    if isinstance(obj, bytes):
+        data = obj
+    else:
+        data = json.dumps(obj, sort_keys=True, separators=(',', ':')).encode()
+    return hashlib.sha256(data).hexdigest()
+
+
+def profile(path):
+    path = path.resolve()
+    if not path.is_relative_to((ROOT / 'profiles').resolve()):
+        raise ValueError('Only repository profiles/ files are allowed')
+    p = json.loads(path.read_text())
+    if set(p) != {'id', 'wordpress', 'php', 'mariadb', 'elementor', 'theme', 'plugins', 'features', 'breakpoints', 'scope'}:
+        raise ValueError('Unexpected profile shape')
+    for key in ('wordpress', 'php', 'mariadb', 'elementor'):
+        if not re.fullmatch(r'\d+(?:\.\d+){1,3}', p[key]):
+            raise ValueError('Unpinned version: ' + key)
+    if p['theme']['slug'] != 'hello-elementor' or not re.fullmatch(r'\d+\.\d+\.\d+', p['theme']['version']):
+        raise ValueError('Unknown theme build')
+    if p['plugins'] or p['features'] != {'atomic_editor': 'released-default-not-assumed-verified'}:
+        raise ValueError('No unverified plugin/experiment inputs in core profile')
+    if not all(type(w) is int and 240 <= w <= 4000 for w in p['breakpoints']):
+        raise ValueError('Invalid breakpoints')
+    if p['scope'] != 'GENERAL_LAB_VERIFIED':
+        raise ValueError('Invalid claim scope')
+    return p
+
+
+def catalog():
+    c = json.loads(CAT.read_text())
+    ds = c['domains']
+    if c['schema_version'] != 1 or len(ds) != 15 or set(d['id'] for d in ds) != set(DOMAINS):
+        raise ValueError('A-O coverage catalog invalid')
+    ids = []
+    for domain in ds:
+        for scenario in domain['scenarios']:
+            key = domain['id'] + ':' + scenario['id']
+            if scenario['test'] not in (None, key):
+                raise ValueError('Test identity mismatch: ' + key)
+            ids.append(key)
+    if len(ids) != len(set(ids)):
+        raise ValueError('Duplicate scenario')
+    return c
+
+
+def wp_env_profile(p):
+    return {'$schema': 'https://schemas.wp.org/trunk/wp-env.json',
+            'core': 'https://wordpress.org/wordpress-' + p['wordpress'] + '.zip',
+            'phpVersion': p['php'], 'mariadbVersion': p['mariadb'],
+            'plugins': ['https://downloads.wordpress.org/plugin/elementor.' + p['elementor'] + '.zip'],
+            'themes': ['https://downloads.wordpress.org/theme/hello-elementor.' + p['theme']['version'] + '.zip'],
+            'config': {'WP_DEBUG': False, 'SCRIPT_DEBUG': False, 'WP_AUTO_UPDATE_CORE': False,
+                       'AUTOMATIC_UPDATER_DISABLED': True}}
+
+
+def test_hash():
+    return digest(b''.join(x.name.encode() + b'\0' + x.read_bytes() for x in sorted((ROOT / 'tests').glob('*.spec.mjs'))))
+
+
+def binary(name):
+    path = ROOT / 'node_modules' / '.bin' / (name + ('.cmd' if os.name == 'nt' else ''))
+    if not path.is_file():
+        raise RuntimeError('Missing test tooling: ' + str(path))
+    return str(path)
+
+
+def command(argv, *, env=None, timeout=300, allow_fail=False):
+    p = subprocess.run(argv, cwd=ROOT, env=env, capture_output=True, text=True, timeout=timeout)
+    if p.returncode and not allow_fail:
+        raise RuntimeError('Command exited ' + str(p.returncode) + ': ' + ' '.join(argv[:5]) + '\n' + p.stderr[-700:] + p.stdout[-300:])
+    return p
+
+
+def wp(*args):
+    return command([binary('wp-env'), 'run', 'cli', 'wp', *args]).stdout
+
+
+def single_version(text):
+    values = [s.strip() for s in text.splitlines() if re.fullmatch(r'\d+\.\d+(?:\.\d+){0,2}(?:[-+][\w.-]+)?', s.strip())]
+    if len(values) != 1:
+        raise RuntimeError('Cannot prove exactly one installed software version')
+    return values[0]
+
+
+def runtime(p):
+    wp('theme', 'activate', 'hello-elementor')
+    actual = {'wordpress': single_version(wp('core', 'version')),
+              'elementor': single_version(wp('plugin', 'get', 'elementor', '--field=version')),
+              'theme': single_version(wp('theme', 'get', 'hello-elementor', '--field=version')),
+              'php': single_version(wp('eval', 'echo PHP_VERSION;'))}
+    db = wp('db', 'query', 'SELECT VERSION();', '--skip-column-names')
+    match = re.search(r'\b(\d+\.\d+\.\d+)-MariaDB', db)
+    if not match:
+        raise RuntimeError('Cannot prove MariaDB runtime version')
+    actual['mariadb'] = match.group(1)
+    actual['atomic_editor_option'] = command([binary('wp-env'), 'run', 'cli', 'wp', 'option', 'get',
+                                                'elementor_experiment-e_atomic_elements'], allow_fail=True).stdout.strip()[:100]
+    for key, expected in (('wordpress', p['wordpress']), ('elementor', p['elementor']),
+                          ('theme', p['theme']['version'])):
+        if actual[key] != expected:
+            raise RuntimeError('Wrong ' + key + ': ' + actual[key] + ' vs ' + expected)
+    for key in ('php', 'mariadb'):
+        if not actual[key].startswith(p[key] + '.'):
+            raise RuntimeError('Wrong ' + key + ' family: ' + actual[key])
+    return actual
+
+
+def template(p, selected):
+    scenarios = []
+    for domain in catalog()['domains']:
+        if selected not in ('all', domain['id']):
+            continue
+        for s in domain['scenarios']:
+            scenarios.append({'capability': domain['id'], 'scenario': s['id'],
+                              'test_identity': s['test'],
+                              'status': 'PRO_OR_LICENSE_UNAVAILABLE' if s.get('requires_pro') else 'NOT_EXECUTED',
+                              'observed': None})
+    return {'schema_version': 1, 'requested': p, 'profile_sha256': digest(p), 'test_sha256': test_hash(),
+            'source_commit': os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'), 'github_run': os.getenv('GITHUB_RUN_ID'),
+            'github_attempt': os.getenv('GITHUB_RUN_ATTEMPT'), 'scope': p['scope'],
+            'installed': None, 'environment_fingerprint': None, 'execution': 'NOT_EXECUTED',
+            'setup_error': None, 'teardown': 'NOT_EXECUTED', 'scenarios': scenarios}
+
+
+def classify_playwright(report, result):
+    cases = {}
+    def visit(suite):
+        for spec in suite.get('specs', []):
+            match = re.match(r'^\[([A-O]):([a-z0-9-]+)\]', spec.get('title', ''))
+            if not match:
+                continue
+            for t in spec.get('tests', []):
+                attempts = t.get('results', [])
+                state = attempts[-1].get('status') if attempts else 'skipped'
+                errors = [str(e.get('message', '')) for a in attempts for e in a.get('errors', [])]
+                error = '\n'.join(errors)
+                if state == 'passed':
+                    status = 'VERIFIED_PASS'
+                elif state in ('failed', 'timedOut') and ('expect(' in error or 'AssertionError' in error):
+                    status = 'VERIFIED_FAIL'
+                elif state in ('failed', 'timedOut', 'interrupted'):
+                    status = 'NOT_PROVEN'
+                else:
+                    status = 'NOT_EXECUTED'
+                cases[match.group(1) + ':' + match.group(2)] = (status, state, error[:800])
+        for sub in suite.get('suites', []):
+            visit(sub)
+    for suite in report.get('suites', []):
+        visit(suite)
+    for scenario in result['scenarios']:
+        if scenario['test_identity'] in cases:
+            status, state, error = cases[scenario['test_identity']]
+            scenario.update(status=status, observed={'state': state, 'error': error or None})
+    return len(cases)
+
+
+def finish(result):
+    statuses = [s['status'] for s in result['scenarios']]
+    if result['installed'] is None:
+        result['execution'] = 'ENVIRONMENT_UNAVAILABLE'
+    elif 'ENVIRONMENT_UNAVAILABLE' in statuses:
+        result['execution'] = 'ENVIRONMENT_UNAVAILABLE'
+    elif 'VERIFIED_FAIL' in statuses:
+        result['execution'] = 'VERIFIED_FAIL'
+    elif result['teardown'] != 'VERIFIED' or result['setup_error'] or any(s != 'VERIFIED_PASS' for s in statuses):
+        result['execution'] = 'INCOMPLETE'
+    else:
+        result['execution'] = 'VERIFIED_PASS'
+    ART.mkdir(parents=True, exist_ok=True)
+    (ART / 'result.json').write_text(json.dumps(result, indent=2, ensure_ascii=False) + '\n')
+    md = ['# Elementor Lab Evidence', '', 'Execution: ' + result['execution'],
+          'Environment fingerprint: ' + str(result['environment_fingerprint']), '',
+          '| Domain | Scenario | State |', '|---|---|---|']
+    md += ['| ' + s['capability'] + ' | ' + s['scenario'] + ' | ' + s['status'] + ' |'
+           for s in result['scenarios']]
+    md += ['', 'Scenario PASS does not establish full-domain, site, or WCAG qualification.']
+    (ART / 'summary.md').write_text('\n'.join(md) + '\n')
+
+
+def execute(p, selected):
+    r = template(p, selected)
+    ART.mkdir(exist_ok=True)
+    (ROOT / '.wp-env.json').write_text(json.dumps(wp_env_profile(p), indent=2) + '\n')
+    env = os.environ.copy()
+    env.update(WP_ENV_HOME=str((ROOT / '.lab-state' / 'wp-env').resolve()), WP_ENV_PORT='8888',
+               LAB_BASE_URL='http://localhost:8888', LAB_BREAKPOINTS=json.dumps(p['breakpoints']))
+    started = False
+    stage = 'provisioning'
+    try:
+        command([binary('wp-env'), 'start'], env=env, timeout=900)
+        started = True
+        os.environ.update({k: env[k] for k in ('WP_ENV_HOME', 'WP_ENV_PORT')})
+        r['installed'] = runtime(p)
+        for attempt in range(40):
+            try:
+                with urlopen('http://localhost:8888/wp-login.php', timeout=3) as response:
+                    if response.status == 200:
+                        break
+            except Exception:
+                time.sleep(2)
+        else:
+            raise RuntimeError('WordPress HTTP readiness not verified')
+        created = wp('post', 'create', '--post_type=page', '--post_status=draft',
+                     '--post_title=EV4 Lab Fixture', '--porcelain')
+        ids = [s.strip() for s in created.splitlines() if s.strip().isdigit()]
+        if len(ids) != 1:
+            raise RuntimeError('Cannot prove fixture post identity')
+        r['fixture_post_id'] = ids[0]
+        env['LAB_PAGE_ID'] = ids[0]
+        r['environment_fingerprint'] = digest({'requested': p, 'installed': r['installed'],
+                                               'test_sha256': r['test_sha256'], 'catalog_sha256': digest(CAT.read_bytes())})
+        cmd = [binary('playwright'), 'test', '--config=playwright.config.mjs']
+        if selected != 'all':
+            cmd.extend(['--grep', r'^\[(?:M|' + selected + r'):'])
+        stage = 'browser'
+        test = command(cmd, env=env, timeout=1200, allow_fail=True)
+        (ART / 'playwright-console.log').write_text((test.stdout + '\n' + test.stderr)[-40000:])
+        report = ART / 'playwright.json'
+        if not report.is_file() or not classify_playwright(json.loads(report.read_text()), r):
+            r['setup_error'] = 'No recognizable executed Playwright scenario evidence'
+        if any(s['scenario'] == 'native-editor-create-reopen' and s['status'] == 'VERIFIED_PASS' for s in r['scenarios']):
+            meta = wp('post', 'meta', 'get', ids[0], '_elementor_data')
+            published = wp('post', 'get', ids[0], '--field=post_status')
+            if not ('e-heading' in meta and 'EV4 Atomic Heading' in meta and 'publish' in published):
+                for s in r['scenarios']:
+                    if s['scenario'] == 'native-editor-create-reopen':
+                        s.update(status='VERIFIED_FAIL', observed={'storage_check': 'missing atomic data or publish status'})
+            else:
+                r['elementor_storage'] = 'Verified native _elementor_data and publication'
+        if test.returncode and not any(s['status'] in ('VERIFIED_FAIL', 'NOT_PROVEN') for s in r['scenarios']):
+            r['setup_error'] = 'Playwright returned failure without recognizable assertion'
+    except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as e:
+        r['setup_error'] = str(e)[:2000]
+        if stage == 'provisioning':
+            for s in r['scenarios']:
+                if s['test_identity']:
+                    s['status'] = 'ENVIRONMENT_UNAVAILABLE'
+    finally:
+        try:
+            if started:
+                command([binary('wp-env'), 'cleanup', '--force'], env=env, timeout=300)
+                r['teardown'] = 'VERIFIED'
+            else:
+                r['teardown'] = 'NOT_STARTED'
+        except Exception as e:
+            r['teardown'] = 'NOT_PROVEN: ' + str(e)[:200]
+        finish(r)
+    return 0 if r['execution'] == 'VERIFIED_PASS' and r['setup_error'] is None else 2
+
+
+def main():
+    cli = argparse.ArgumentParser()
+    sub = cli.add_subparsers(dest='operation', required=True)
+    run = sub.add_parser('run')
+    run.add_argument('--profile', default='profiles/core-4.3.5.json')
+    run.add_argument('--capability', default='all', choices=['all', *DOMAINS])
+    sub.add_parser('catalog')
+    reuse = sub.add_parser('reuse')
+    reuse.add_argument('--profile', default='profiles/core-4.3.5.json')
+    reuse.add_argument('--evidence', required=True)
+    args = cli.parse_args()
+    if args.operation == 'catalog':
+        print(json.dumps(catalog(), indent=2))
+        return 0
+    p = profile((ROOT / args.profile).resolve())
+    if args.operation == 'run':
+        return execute(p, args.capability)
+    old = json.loads(Path(args.evidence).read_text())
+    matching = old.get('profile_sha256') == digest(p) and old.get('test_sha256') == test_hash() and bool(old.get('environment_fingerprint'))
+    print(json.dumps({'identity_match': matching,
+                      'disposition': 'REVIEW_REQUIRED' if matching else 'NOT_PROVEN',
+                      'note': 'Historical matching metadata never proves the current live site.'}, indent=2))
+    return 0 if matching else 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())
