@@ -569,7 +569,7 @@ const observe = async (_identity, _acquire) => ({
     def test_native_atomic_container_topology_is_unique_and_direct(self):
         """Exercise production parser; browser and storage states are separate."""
         ids = {'atomic': '2eb52f4', 'container': '5509617'}
-        expected_title = {'$type': 'escaped-html', 'value': 'EV4 Atomic Heading'}
+        expected_title = {'$$type': 'escaped-html', 'value': 'EV4 Atomic Heading'}
         def heading():
             return {'id': ids['atomic'], 'elType': 'widget',
                     'widgetType': 'e-heading',
@@ -590,7 +590,7 @@ const observe = async (_identity, _acquire) => ({
                 [container([heading(), heading()])], 'MISMATCH'),
             'unknown_title_encoding': (
                 [container([{**heading(), 'settings': {'title': {
-                    '$type': 'html', 'value': 'EV4 Atomic Heading'}}}])], 'UNSUPPORTED'),
+                    '$$type': 'html', 'value': 'EV4 Atomic Heading'}}}])], 'UNSUPPORTED'),
             'wrong_heading_type': (
                 [container([{**heading(), 'widgetType': 'heading'}])], 'MISMATCH'),
         }
