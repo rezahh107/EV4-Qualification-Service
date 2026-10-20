@@ -43,6 +43,20 @@ class LabTests(unittest.TestCase):
         login = lab.template(p, 'O')
         self.assertTrue(all(x['capability'] == 'O' for x in login['scenarios']))
 
+    def test_helper_change_invalidates_evidence_fingerprint(self):
+        # A helper mutation must invalidate historical test identity.
+        with tempfile.NamedTemporaryFile(
+            mode='w+', dir=lab.ROOT / 'tests', suffix='.mjs'
+        ) as helper:
+            helper.write('export const sentinel = 1;')
+            helper.flush()
+            before = lab.test_hash()
+            helper.seek(0)
+            helper.truncate()
+            helper.write('export const sentinel = 2;')
+            helper.flush()
+            self.assertNotEqual(before, lab.test_hash())
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]
