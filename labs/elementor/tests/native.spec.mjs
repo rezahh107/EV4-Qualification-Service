@@ -101,24 +101,27 @@ test('[I:native-link-activation] native Elementor link activates anchor',async({
 test('[K:ten-viewport-geometry] real DOM responsive measurements',async({page})=>{
  const widths=JSON.parse(process.env.LAB_BREAKPOINTS||'[320,360,375,390,412,414,768,1024,1440,1920]');
  const records=[];
- await productAssertion('K:ten-viewport-geometry', async () => {
-  for(const width of widths){
-   await page.setViewportSize({width,height:900});
-   await page.goto(frontend);
-   const measurement=await page.locator('h2.e-heading-base').first().evaluate(node=>{
-      const r=node.getBoundingClientRect();
-      return {x:r.x,right:r.right,height:r.height,
-        viewport:window.innerWidth,documentWidth:document.documentElement.scrollWidth};
-   });
-   records.push({width,...measurement});
-   expect(measurement.height).toBeGreaterThan(0);
-   expect(measurement.x).toBeGreaterThanOrEqual(-1);
-   expect(measurement.right).toBeLessThanOrEqual(width+1);
-   expect(measurement.documentWidth).toBeLessThanOrEqual(width+1);
-  }
- });
+ for(const width of widths){
+  await page.setViewportSize({width,height:900});
+  await page.goto(frontend);
+  const measurement=await page.locator('h2.e-heading-base').first().evaluate(node=>{
+   const r=node.getBoundingClientRect();
+   return {x:r.x,right:r.right,height:r.height,
+    viewport:window.innerWidth,documentWidth:document.documentElement.scrollWidth};
+  });
+  records.push({width,...measurement});
+ }
  fs.mkdirSync('./artifacts',{recursive:true});
  fs.writeFileSync('./artifacts/responsive-geometry.json',JSON.stringify(records,null,2));
+ await productAssertion('K:ten-viewport-geometry', async () => {
+  expect(records).toHaveLength(widths.length);
+  for(const measurement of records){
+   expect(measurement.height).toBeGreaterThan(0);
+   expect(measurement.x).toBeGreaterThanOrEqual(-1);
+   expect(measurement.right).toBeLessThanOrEqual(measurement.width+1);
+   expect(measurement.documentWidth).toBeLessThanOrEqual(measurement.width+1);
+  }
+ });
 });
 
 test('[L:semantic-heading-name] accessible name and heading element',async({page})=>{

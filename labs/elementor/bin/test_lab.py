@@ -273,6 +273,81 @@ class LabTests(unittest.TestCase):
                 lab.finish(r)
         self.assertEqual(r['execution'], 'NOT_PROVEN')
 
+    def test_responsive_preparation_vs_qualified_geometry(self):
+        """Synthetic reporter inputs falsify origin classification, not real browser behavior."""
+        identity = 'K:ten-viewport-geometry'
+        widths = [320, 360, 375, 390, 412, 414, 768, 1024, 1440, 1920]
+
+        def classification(browser_state, steps, message=None):
+            report = {'suites': [{'specs': [{
+                'title': '[' + identity + '] responsive measurement',
+                'tests': [{'results': [{
+                    'status': browser_state, 'steps': steps,
+                    'errors': [{'message': message}] if message else [],
+                }]}],
+            }]}]}
+            evidence = lab.template(lab.profile(lab.ROOT / 'profiles/core-4.3.5.json'), 'K')
+            lab.classify_playwright(report, evidence)
+            return next(x for x in evidence['scenarios'] if x['test_identity'] == identity)
+
+        # The operation never reached the authorized step. Error wording is irrelevant.
+        self.assertEqual(classification('failed', [], 'page.goto navigation error expect()')['status'],
+                         'NOT_PROVEN')
+        self.assertEqual(classification('failed', [], 'locator.evaluate measurement error')['status'],
+                         'NOT_PROVEN')
+
+        valid = [{'width': width, 'height': 25, 'x': 1, 'right': width - 1,
+                  'documentWidth': width} for width in widths]
+        self.assertEqual(len(valid), 10)
+        self.assertTrue(all(x['height'] > 0 and x['x'] >= -1 and
+                            x['right'] <= x['width'] + 1 and
+                            x['documentWidth'] <= x['width'] + 1 for x in valid))
+        step = {'title': lab.QUALIFIED_STEP_PREFIX + identity}
+        passed = classification('passed', [step])
+        self.assertEqual(passed['status'], 'VERIFIED_PASS')
+        self.assertEqual(passed['observed']['qualified_step_count'], 1)
+
+        invalid = [dict(x) for x in valid]
+        invalid[3]['documentWidth'] = invalid[3]['width'] + 20
+        self.assertFalse(all(x['documentWidth'] <= x['width'] + 1 for x in invalid))
+        failure = classification('failed', [dict(step, error={
+            'message': 'Observed overflow in completed 390px measurement'})])
+        self.assertEqual(failure['status'], 'VERIFIED_FAIL')
+        self.assertEqual(failure['observed']['qualified_step_count'], 1)
+
+    def test_no_setup_navigation_or_measurement_inside_any_qualified_callback(self):
+        from unittest.mock import patch
+        original = (lab.ROOT / 'tests/native.spec.mjs').read_text()
+        calls = [
+            ("K:ten-viewport-geometry", "await page.goto(frontend);"),
+            ("K:ten-viewport-geometry", "await page.setViewportSize({width:320,height:900});"),
+            ("K:ten-viewport-geometry", "await page.locator('h2').first().evaluate(n=>n.textContent);"),
+            ("K:ten-viewport-geometry", "await page.locator('h2').first().boundingBox();"),
+            ("L:semantic-heading-name", "await page.goto(frontend);"),
+            ("C:measured-geometry", "await page['goto'](frontend);"),
+            ("E:native-global-class-persistence", "await page.locator('h2').first().evaluate(n=>n.textContent);"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'tests').mkdir()
+            for support in ('helpers.mjs', 'qualification.mjs'):
+                (root / 'tests' / support).write_text(
+                    (lab.ROOT / 'tests' / support).read_text()
+                )
+            with patch.object(lab, 'ROOT', root):
+                for identity, operation in calls:
+                    marker = "await productAssertion('" + identity + "', async () => {"
+                    self.assertIn(marker, original)
+                    modified = original.replace(marker, marker + '\n' + operation, 1)
+                    (root / 'tests/native.spec.mjs').write_text(modified)
+                    with self.subTest(identity=identity, operation=operation):
+                        with self.assertRaisesRegex(
+                            ValueError, 'Structural source qualification failed'
+                        ):
+                            lab.validate_qualification_coverage()
+                (root / 'tests/native.spec.mjs').write_text(original)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]

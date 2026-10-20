@@ -86,3 +86,25 @@ Catalog-backed browser test declarations and `productAssertion()` calls are pars
 In the Playwright JSON report, exactly one matching reserved step must appear for a scenario and its structurally authorized test implementation must be present. Duplicate, foreign, missing or ambiguous reserved steps are `NOT_PROVEN` (not `VERIFIED_FAIL`). This maintains the existing scenario names, result states and `EXPLICIT_PLAYWRIGHT_STEP` evidence label. A product assertion that actually fails inside the authorized helper remains `VERIFIED_FAIL`, including the default-button WCAG AA **4.5:1** contrast check. A subsequent harness failure after a successful product assertion remains `NOT_PROVEN`.
 
 This is a deliberately narrow source contract for the present test harness, not a general JavaScript static-security sandbox. A new test authoring pattern requires an explicit reviewed extension of the source checker and relevant falsification tests. `bin/validate-source.mjs` participates in the test evidence hash so validator changes cannot silently reuse an earlier test identity.
+
+## PRI-FND-005 — observable geometry before the product assertion
+
+The responsive `K:ten-viewport-geometry` test first collects all ten real
+viewport measurements (viewport size, navigation and browser DOM measurements)
+**outside** the reserved `productAssertion()` step. It then performs the
+unchanged geometry comparisons, plus an observation-count check, inside exactly
+one reserved Step. The recorded responsive geometry artifact and the original
+320/360/375/390/412/414/768/1024/1440/1920 widths are retained.
+
+The Acorn-backed structural source contract now rejects known setup,
+navigation and measurement browser methods inside **any catalog-backed
+qualification callback**, including nested/computed member access. Tests
+falsify mutations to K and unrelated C/E/L scenario callbacks. If browser
+navigation or measurement fails before the Step, the classifier cannot claim a
+qualified responsive failure and returns `NOT_PROVEN`. A completed measurement
+that violates a geometry assertion remains `VERIFIED_FAIL`. This is a bounded
+authoring-side control, not a general JavaScript effect system.
+
+RC-1 exact-Head gating, RC-2 fixture persistence reconciliation, the
+reserved-Step origin contract, Pro availability and the default-button
+**4.5:1** WCAG contrast threshold remain unchanged.

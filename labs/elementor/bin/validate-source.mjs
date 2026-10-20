@@ -48,6 +48,37 @@ function qualifiedOrigin(name) {
   return typeof name === 'string' && /^[A-O]:[a-z0-9-]+$/.test(name);
 }
 
+// Fail closed when product-assertion callbacks acquire data or change page state.
+// AST traversal includes nested functions and computed literal members, so
+// moving page.goto(), locator.evaluate() or an alias into an assertion is rejected.
+const nonQualificationMethods = new Set([
+  'setViewportSize', 'goto', 'reload', 'goBack', 'goForward',
+  'waitForLoadState', 'waitForURL', 'waitForTimeout', 'waitForNavigation',
+  'waitForResponse', 'waitForRequest', 'waitForEvent', 'waitForSelector',
+  'waitForFunction', 'waitFor', 'evaluate', 'evaluateHandle',
+  'boundingBox', 'getBoundingClientRect', 'getClientRects', 'screenshot',
+  'click', 'dblclick', 'fill', 'press', 'type', 'hover', 'focus',
+  'setInputFiles', 'dragTo', 'dispatchEvent', 'selectOption',
+  'check', 'uncheck', 'readFileSync', 'writeFileSync', 'mkdirSync',
+]);
+const nonQualificationCalls = new Set(['fetch', 'getComputedStyle']);
+function forbidAcquisitionInAssertion(callback, file, identity) {
+  walk(callback.body, node => {
+    if (node.type === 'MemberExpression') {
+      const key = node.computed
+        ? (node.property.type === 'Literal' ? node.property.value : null)
+        : (node.property.type === 'Identifier' ? node.property.name : null);
+      if (nonQualificationMethods.has(key))
+        reject(file + ': setup/navigation/measurement operation ' + key +
+               ' inside productAssertion for ' + identity);
+    }
+    if (node.type === 'CallExpression' && node.callee.type === 'Identifier' &&
+        nonQualificationCalls.has(node.callee.name))
+      reject(file + ': acquisition call ' + node.callee.name +
+             ' inside productAssertion for ' + identity);
+  });
+}
+
 // The only permitted step authority is the existing small helper with
 // one exported function, one native test.step call and a canonical title.
 const helper = parseFile(path.join(testDir, 'qualification.mjs'));
@@ -183,6 +214,7 @@ for (const file of files) {
         !qualifiedOrigin(node.arguments[0].value) ||
         !['ArrowFunctionExpression', 'FunctionExpression'].includes(node.arguments[1].type))
       reject(file + ': nonliteral/malformed qualification invocation');
+    forbidAcquisitionInAssertion(node.arguments[1], file, node.arguments[0].value);
     const containing = ownTests.filter(t => node.start >= t.callback.start &&
                                             node.end <= t.callback.end);
     if (containing.length !== 1 || containing[0].identity !== node.arguments[0].value)
