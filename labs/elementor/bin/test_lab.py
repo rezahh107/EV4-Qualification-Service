@@ -427,6 +427,39 @@ class LabTests(unittest.TestCase):
                                          'sha256':checksum,'value':{'count':1}}))
                 self.assertEqual(lab.read_qualification_receipts('C:measured-geometry')['assertion_state'],'NOT_PROVEN')
 
+    def test_approved_predicate_completeness_manifest_falsification(self):
+        from unittest.mock import patch
+        original=(lab.ROOT/'tests/native.spec.mjs').read_text()
+        changes=[
+            ("expect(snapshot?.width).toBeGreaterThan(5);","expect(snapshot?.width).toBeGreaterThan(0);"),
+            ("expect(snapshot.afterDuplicate).toBe(2);","expect(snapshot.afterDuplicate).toBe(1);"),
+            ("expect(measurement.documentWidth).toBeLessThanOrEqual(measurement.width+1);",
+             "expect(measurement.documentWidth).toBeLessThanOrEqual(measurement.width+50);"),
+            ("toBeGreaterThanOrEqual(4.5);","toBeGreaterThanOrEqual(2.0);"),
+            ("expect(snapshot.httpStatus).toBe(200);","expect(snapshot.httpStatus).toBe(201);"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'tests').mkdir()
+            (root/'predicate-contract.json').write_text(
+                (lab.ROOT/'predicate-contract.json').read_text())
+            for name in ('helpers.mjs','qualification.mjs','observation.mjs'):
+                (root/'tests'/name).write_text((lab.ROOT/'tests'/name).read_text())
+            with patch.object(lab,'ROOT',root):
+                for before,after in changes:
+                    self.assertIn(before,original)
+                    (root/'tests/native.spec.mjs').write_text(original.replace(before,after,1))
+                    with self.subTest(before=before):
+                        with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
+                            lab.validate_qualification_coverage()
+                (root/'tests/native.spec.mjs').write_text(original)
+                self.assertEqual(len(lab.validate_qualification_coverage()),15)
+                path=root/'tests/qualification.mjs'
+                source=path.read_text()
+                path.write_text(source.replace('PRODUCT_FAIL','PRODUCT_PASS'))
+                with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
+                    lab.validate_qualification_coverage()
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]
