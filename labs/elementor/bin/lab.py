@@ -284,6 +284,14 @@ def probe_wordpress_persistence(post_id, fetch=wp):
     try:
         meta = fetch('post', 'meta', 'get', post_id, '_elementor_data')
         published = fetch('post', 'get', post_id, '--field=post_status')
+        # First-party synthetic fixture only; preserve exact raw document for
+        # a format-qualified structural persistence implementation.
+        ART.mkdir(parents=True, exist_ok=True)
+        (ART / 'native-storage-sample.json').write_text(json.dumps({
+            'fixture_post_id': post_id,
+            'raw_elementor_data': meta.strip(),
+            'post_status': published.strip(),
+        }, ensure_ascii=False, indent=2) + '\n')
     except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         return {'state': 'UNAVAILABLE', 'error': str(exc)[:800]}
     atomic_data = 'e-heading' in meta and 'EV4 Atomic Heading' in meta
