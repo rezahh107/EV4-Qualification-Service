@@ -5,7 +5,6 @@ import { createAtomicFixture } from './helpers.mjs';
 const postId = process.env.LAB_PAGE_ID;
 const title = 'EV4 Atomic Heading';
 const frontend = '/?page_id=' + postId;
-test.describe.configure({mode:'serial'});
 
 test('[O:installed-runtime-browser] real WordPress HTTP form responds',async({page})=>{
  const response=await page.goto('/wp-login.php');
@@ -42,14 +41,13 @@ test('[A:native-parent-child] actual published V4 element retains parent',async(
  await page.goto(frontend);
  const heading=page.locator('h2.e-heading-base').first();
  await expect(heading).toHaveText(title);
+ const ids=JSON.parse(fs.readFileSync('./artifacts/element-ids.json','utf8'));
  const data=await heading.evaluate(node=>{
-   const widget=node.closest('.elementor-element');
-   const container=widget?.parentElement?.closest('.elementor-element');
-   return {widget:widget?.getAttribute('data-widget_type'),
-      parent:container?.getAttribute('data-element_type')};
+   const parent=node.closest('[data-element_type="container"]');
+   return {atomicId:node.getAttribute('data-interaction-id'),
+      parentId:parent?.getAttribute('data-id')};
  });
- expect(data.widget).toContain('e-heading');
- expect(data.parent).toBe('container');
+ expect(data).toEqual({atomicId:ids.atomic,parentId:ids.container});
 });
 
 test('[B:native-flex-container] native published flex layout is computed',async({page})=>{

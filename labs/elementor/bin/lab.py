@@ -177,6 +177,20 @@ def classify_playwright(report, result):
     return len(cases)
 
 
+def bind_fixture_precondition(result):
+    fixture = next((item for item in result['scenarios']
+                    if item['test_identity'] == 'M:native-editor-create-reopen'), None)
+    if fixture is None or fixture['status'] == 'VERIFIED_PASS':
+        return
+    for item in result['scenarios']:
+        if item['capability'] in FIXTURE_DEPENDENTS and item['status'] in ('VERIFIED_FAIL', 'VERIFIED_PASS'):
+            item['observed'] = {
+                'precondition': 'Native Elementor fixture authoring was not verified',
+                'reported_browser_observation': item['observed'],
+            }
+            item['status'] = 'NOT_PROVEN'
+
+
 def finish(result):
     statuses = [s['status'] for s in result['scenarios']]
     if result['installed'] is None:
@@ -242,6 +256,7 @@ def execute(p, selected):
         report = ART / 'playwright.json'
         if not report.is_file() or not classify_playwright(json.loads(report.read_text()), r):
             r['setup_error'] = 'No recognizable executed Playwright scenario evidence'
+        bind_fixture_precondition(r)
         if any(s['scenario'] == 'native-editor-create-reopen' and s['status'] == 'VERIFIED_PASS' for s in r['scenarios']):
             meta = wp('post', 'meta', 'get', ids[0], '_elementor_data')
             published = wp('post', 'get', ids[0], '--field=post_status')
