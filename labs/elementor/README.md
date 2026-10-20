@@ -175,3 +175,22 @@ value matchers and intentionally expected failing steps to exercise complete
 negative snapshots, unavailable observations, unexpected callback exceptions,
 negated matcher outcomes and successful data-only predicates. These test
 fixtures are unit evidence, not WordPress product evidence.
+
+### Additional source-integrity closure: observation acquisition
+
+The predicate manifest (schema version **2**) also pins the canonical Acorn
+AST body of each of the 15 executable scenario functions in
+`scenario_source`. This closes a separate source-authority gap: a future
+change that replaces actual browser observation with fabricated, prevalidated
+snapshot values must no longer pass merely because the pure-data product
+predicates are unchanged. The native fixture-creation helper
+`tests/helpers.mjs` is also bound to its reviewed Git Blob identity.
+Altered acquisition, precondition, fixture setup, or assertion code requires
+a new reviewed manifest/identity before its evidence can qualify. Comments
+and formatting do not change AST signatures.
+
+Regression mutations substitute fabricated C, O, A and K observations while
+preserving the existing predicates, and alter the fixture helper's emitted
+element identity. All must fail closed at source qualification. This contract
+is source-integrity control for the accepted Core 4.3.5 scenario
+implementations—not a general proof that every browser observation is correct.

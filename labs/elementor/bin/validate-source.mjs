@@ -90,6 +90,7 @@ function predicateFingerprint(callback) {
     .update(JSON.stringify(canonicalSyntax(callback.body))).digest('hex');
 }
 const predicateFingerprints = {};
+const scenarioSourceFingerprints = {};
 
 function qualifyOnlyPlainAssertions(callback, file, identity) {
   if (callback.async || callback.generator || callback.params.length !== 1 ||
@@ -281,6 +282,7 @@ for (const file of files) {
   });
   for (const t of ownTests) {
     if (declarations.has(t.identity)) reject('Duplicate scenario declaration: ' + t.identity);
+    scenarioSourceFingerprints[t.identity] = predicateFingerprint(t.callback);
     if (qualificationCalls.filter(id => id === t.identity).length !== 1)
       reject(t.identity + ': exactly one authorized invocation required');
     if (acquisitions.filter(id => id === t.identity).length !== 1)
@@ -296,18 +298,26 @@ if (!sawTestFile || declarations.size !== expected.size ||
 let contract;
 try { contract = JSON.parse(fs.readFileSync(path.join(root,'predicate-contract.json'),'utf8')); }
 catch { reject('Pinned predicate contract unavailable'); }
-if (contract.schema_version !== 1 ||
+if (contract.schema_version !== 2 ||
     contract.source_profile !== 'core-4.3.5-wp-7.1.3' ||
+    !contract.predicates || !contract.scenario_source ||
     JSON.stringify(Object.keys(contract.predicates).sort()) !==
+    JSON.stringify([...declarations.keys()].sort()) ||
+    JSON.stringify(Object.keys(contract.scenario_source).sort()) !==
     JSON.stringify([...declarations.keys()].sort()))
-  reject('Predicate coverage manifest mismatch');
+  reject('Reviewed scenario and predicate coverage manifest mismatch');
 for (const [id,hash] of Object.entries(predicateFingerprints)) {
   if (contract.predicates[id] !== hash)
     reject('Reviewed product predicate modified without approval: ' + id);
 }
+for (const [id,hash] of Object.entries(scenarioSourceFingerprints)) {
+  if (contract.scenario_source[id] !== hash)
+    reject('Reviewed scenario acquisition/setup source modified without approval: ' + id);
+}
 const helperBlobSums = {
  'qualification.mjs': '34d5608d48d38d3eae9662bf3e5b4756ed0397e0',
  'observation.mjs': '323ef6c96c47e79a4371684c6b09539eee91442b',
+ 'helpers.mjs': 'b3a5072ed683aead00e1526632b1af909ed5c951',
 };
 for (const [filename, reviewed] of Object.entries(helperBlobSums)) {
   const bytes=fs.readFileSync(path.join(testDir,filename));

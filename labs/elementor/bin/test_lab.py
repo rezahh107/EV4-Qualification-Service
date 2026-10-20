@@ -460,6 +460,53 @@ class LabTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
                     lab.validate_qualification_coverage()
 
+    def test_observation_source_substitution_fails_closed(self):
+        """Even intact predicates must not qualify a fabricated acquisition."""
+        from unittest.mock import patch
+
+        original = (lab.ROOT / 'tests/native.spec.mjs').read_text()
+        changes = [
+            ("return await page.locator('h2.e-heading-base').first().boundingBox();",
+             "return {width:200,height:200,x:0,y:0};"),
+            ("return {httpStatus:response?.status()??null,",
+             "return {httpStatus:200,"),
+            ("const afterDuplicate=await settledCount(headings,2);",
+             "const afterDuplicate=2;"),
+            ("records.push({width,...measurement});",
+             "records.push({width,x:0,right:width,height:20,viewport:width,documentWidth:width});"),
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'tests').mkdir()
+            (root / 'predicate-contract.json').write_text(
+                (lab.ROOT / 'predicate-contract.json').read_text()
+            )
+            for name in ('helpers.mjs', 'qualification.mjs', 'observation.mjs'):
+                (root / 'tests' / name).write_text(
+                    (lab.ROOT / 'tests' / name).read_text()
+                )
+            with patch.object(lab, 'ROOT', root):
+                for original_code, fake_code in changes:
+                    self.assertIn(original_code, original)
+                    mutant = original.replace(original_code, fake_code, 1)
+                    (root / 'tests/native.spec.mjs').write_text(mutant)
+                    with self.subTest(change=original_code):
+                        with self.assertRaisesRegex(
+                            ValueError, 'Structural source qualification failed'
+                        ):
+                            lab.validate_qualification_coverage()
+                (root / 'tests/native.spec.mjs').write_text(original)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                helper = root / 'tests/helpers.mjs'
+                helper.write_text(helper.read_text().replace(
+                    'return {root,ids};',
+                    'return {root,ids:{...ids,atomic:"fake123"}};'
+                ))
+                with self.assertRaisesRegex(
+                    ValueError, 'Structural source qualification failed'
+                ):
+                    lab.validate_qualification_coverage()
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]
