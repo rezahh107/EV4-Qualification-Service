@@ -154,7 +154,7 @@ for (const file of files) {
   for (const declaration of ast.body) {
     if (declaration.type !== 'ImportDeclaration') continue;
     const src = declaration.source.value;
-    if (!['@playwright/test', 'node:fs', './helpers.mjs', './qualification.mjs', './observation.mjs'].includes(src))
+    if (!['@playwright/test', 'node:fs', 'node:path', 'node:crypto', './helpers.mjs', './qualification.mjs', './observation.mjs'].includes(src))
       reject(file + ': unknown executable import ' + src);
     if (src === '@playwright/test') {
       if (declaration.specifiers.some(s => s.type !== 'ImportSpecifier' ||
