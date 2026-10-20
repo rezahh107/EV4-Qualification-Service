@@ -146,7 +146,8 @@ class LabTests(unittest.TestCase):
             r = lab.template(p,'all')
             r['installed'] = {'wordpress':'7.1.3'}
             for item in r['scenarios']:
-                if item['test_identity'] and item['capability'] in lab.FIXTURE_DEPENDENTS:
+                if item['test_identity'] and (item['capability'] in lab.FIXTURE_DEPENDENTS
+                                               or item['test_identity'] == 'M:native-editor-create-reopen'):
                     item['status'] = 'VERIFIED_PASS'
                     item['observed'] = {'browser_assertion':'passed'}
                 if item['test_identity'] == 'O:installed-runtime-browser':
