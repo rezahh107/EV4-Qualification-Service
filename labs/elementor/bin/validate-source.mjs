@@ -48,77 +48,96 @@ function qualifiedOrigin(name) {
   return typeof name === 'string' && /^[A-O]:[a-z0-9-]+$/.test(name);
 }
 
-// Fail closed when product-assertion callbacks acquire data or change page state.
-// AST traversal includes nested functions and computed literal members, so
-// moving page.goto(), locator.evaluate() or an alias into an assertion is rejected.
-const nonQualificationMethods = new Set([
-  'setViewportSize', 'goto', 'reload', 'goBack', 'goForward',
-  'waitForLoadState', 'waitForURL', 'waitForTimeout', 'waitForNavigation',
-  'waitForResponse', 'waitForRequest', 'waitForEvent', 'waitForSelector',
-  'waitForFunction', 'waitFor', 'evaluate', 'evaluateHandle',
-  'boundingBox', 'getBoundingClientRect', 'getClientRects', 'screenshot',
-  'click', 'dblclick', 'fill', 'press', 'type', 'hover', 'focus',
-  'setInputFiles', 'dragTo', 'dispatchEvent', 'selectOption',
-  'check', 'uncheck', 'readFileSync', 'writeFileSync', 'mkdirSync',
-]);
-const nonQualificationCalls = new Set(['fetch', 'getComputedStyle']);
-function forbidAcquisitionInAssertion(callback, file, identity) {
-  walk(callback.body, node => {
-    if (node.type === 'MemberExpression') {
-      const key = node.computed
-        ? (node.property.type === 'Literal' ? node.property.value : null)
-        : (node.property.type === 'Identifier' ? node.property.name : null);
-      if (nonQualificationMethods.has(key))
-        reject(file + ': setup/navigation/measurement operation ' + key +
-               ' inside productAssertion for ' + identity);
+// Closed grammar for actual product predicates. No unreviewed helper calls,
+// browser handles, async evaluation, accessors, arbitrary globals or mutations.
+const matchers = new Set(['toBe','toEqual','toMatch','toHaveLength',
+  'toBeGreaterThan','toBeGreaterThanOrEqual','toBeLessThan',
+  'toBeLessThanOrEqual','toBeNull']);
+function pureValue(n, known) {
+  if (!n) return false;
+  if (n.type === 'ChainExpression') return pureValue(n.expression, known);
+  if (n.type === 'Literal') return true;
+  if (n.type === 'Identifier') return known.has(n.name);
+  if (n.type === 'MemberExpression') {
+    return pureValue(n.object, known) &&
+      (n.computed ? n.property.type === 'Literal' &&
+       (typeof n.property.value === 'string' || Number.isInteger(n.property.value)) :
+       n.property.type === 'Identifier');
+  }
+  if (n.type === 'BinaryExpression' && ['+','-','*','/'].includes(n.operator))
+    return pureValue(n.left, known) && pureValue(n.right, known);
+  if (n.type === 'UnaryExpression' && ['-','+','!'].includes(n.operator))
+    return pureValue(n.argument, known);
+  if (n.type === 'ArrayExpression') return n.elements.every(x => pureValue(x, known));
+  if (n.type === 'ObjectExpression')
+    return n.properties.every(x => x.type === 'Property' && !x.computed &&
+      pureValue(x.value, known));
+  return false;
+}
+function qualifyOnlyPlainAssertions(callback, file, identity) {
+  if (callback.async || callback.generator || callback.params.length !== 1 ||
+      !identifier(callback.params[0], 'snapshot') || callback.body.type !== 'BlockStatement')
+    reject(file + ': unsupported async/parameterized product predicate ' + identity);
+  function checkStatements(statements, known) {
+    for (const stmt of statements) {
+      if (stmt.type === 'ForOfStatement') {
+        if (stmt.await || stmt.left?.type !== 'VariableDeclaration' ||
+            stmt.left.kind !== 'const' || stmt.left.declarations.length !== 1 ||
+            stmt.left.declarations[0].id.type !== 'Identifier' ||
+            stmt.left.declarations[0].init ||
+            !pureValue(stmt.right, known) || stmt.body.type !== 'BlockStatement')
+          reject(file + ': unsupported product-predicate loop ' + identity);
+        const next = new Set(known);
+        next.add(stmt.left.declarations[0].id.name);
+        checkStatements(stmt.body.body, next);
+        continue;
+      }
+      const outer = stmt.type === 'ExpressionStatement' && stmt.expression;
+      if (outer?.type !== 'CallExpression' || outer.optional ||
+          outer.callee.type !== 'MemberExpression' ||
+          !identifier(outer.callee.property, outer.callee.property.name) ||
+          !matchers.has(outer.callee.property.name))
+        reject(file + ': product callback contains non-predicate operation ' + identity);
+      let base = outer.callee.object;
+      if (memberIs(base, 'not')) base = base.object;
+      if (base?.type !== 'CallExpression' || !identifier(base.callee, 'expect') ||
+          !(base.arguments.length === 1 || base.arguments.length === 2) ||
+          !base.arguments.every(x => pureValue(x, known)) ||
+          !outer.arguments.every(x => pureValue(x, known)))
+        reject(file + ': matcher reads non-data input or invokes helper ' + identity);
     }
-    if (node.type === 'CallExpression' && node.callee.type === 'Identifier' &&
-        nonQualificationCalls.has(node.callee.name))
-      reject(file + ': acquisition call ' + node.callee.name +
-             ' inside productAssertion for ' + identity);
-  });
+  }
+  checkStatements(callback.body.body, new Set(['snapshot']));
 }
 
 // The only permitted step authority is the existing small helper with
 // one exported function, one native test.step call and a canonical title.
 const helper = parseFile(path.join(testDir, 'qualification.mjs'));
-if (helper.body.length !== 2) reject('Qualification helper has unexpected top-level code');
-const [helperImport, helperExport] = helper.body;
-if (helperImport.type !== 'ImportDeclaration' || helperImport.source.value !== '@playwright/test' ||
-    helperImport.specifiers.length !== 1 ||
-    helperImport.specifiers[0].type !== 'ImportSpecifier' ||
-    !identifier(helperImport.specifiers[0].imported, 'test') ||
-    !identifier(helperImport.specifiers[0].local, 'test')) {
-  reject('Qualification helper must import the native Playwright test binding');
-}
-const functionNode = helperExport.type === 'ExportNamedDeclaration' && helperExport.declaration;
-if (functionNode?.type !== 'FunctionDeclaration' ||
-    !identifier(functionNode.id, 'productAssertion') ||
-    functionNode.params.length !== 2 ||
-    !identifier(functionNode.params[0], 'identity') ||
-    !identifier(functionNode.params[1], 'assertProduct')) {
-  reject('Qualification helper must export the canonical productAssertion function');
-}
-let helperSteps = 0;
-walk(functionNode.body, node => {
-  if (node.type !== 'CallExpression' || !memberIs(node.callee, 'step')) return;
-  helperSteps++;
-  const [title, body] = node.arguments;
-  if (!identifier(node.callee.object, 'test') ||
+const helperExports = helper.body.filter(node => node.type === 'ExportNamedDeclaration');
+const fn = helperExports.length === 1 && helperExports[0].declaration;
+if (!fn || fn.type !== 'FunctionDeclaration' ||
+    !identifier(fn.id, 'productAssertion') || fn.params.length !== 3 ||
+    !identifier(fn.params[0], 'identity') ||
+    !identifier(fn.params[1], 'observation') ||
+    !identifier(fn.params[2], 'assertProduct'))
+  reject('Qualification helper has invalid public qualification signature');
+const nativeTestImports = helper.body.filter(node=>node.type === 'ImportDeclaration' &&
+  node.source.value === '@playwright/test');
+if (nativeTestImports.length !== 1 ||
+    !nativeTestImports[0].specifiers.some(x => x.type === 'ImportSpecifier' &&
+       identifier(x.imported,'test') && identifier(x.local,'test')))
+  reject('Qualification helper must bind native Playwright test');
+let reservedSteps = 0;
+walk(fn.body, node=>{
+  if (node.type !== 'CallExpression' || !memberIs(node.callee,'step')) return;
+  reservedSteps++;
+  const [title] = node.arguments;
+  if (!identifier(node.callee.object,'test') ||
       title?.type !== 'BinaryExpression' || title.operator !== '+' ||
-      !literal(title.left, prefix) || !identifier(title.right, 'identity') ||
-      !identifier(body, 'assertProduct') || node.arguments.length !== 2) {
-    reject('Qualification helper creates noncanonical reserved step');
-  }
+      !literal(title.left, prefix) || !identifier(title.right,'identity'))
+    reject('Qualification helper has noncanonical step identity');
 });
-if (helperSteps !== 1) reject('Qualification helper must have exactly one reserved test.step');
-const returns = [];
-walk(functionNode.body, node => { if (node.type === 'ReturnStatement') returns.push(node.argument); });
-if (returns.length !== 1 || returns[0]?.type !== 'CallExpression' ||
-    !memberIs(returns[0].callee, 'step') ||
-    !identifier(returns[0].callee.object, 'test')) {
-  reject('Qualification helper must directly return the canonical native step');
-}
+if (reservedSteps !== 1) reject('Qualification helper requires exactly one native Step');
 
 // Every browser test is inspected: a raw test.step or an alias to .step is
 // forbidden outside the helper, regardless of its argument construction.
@@ -135,7 +154,7 @@ for (const file of files) {
   for (const declaration of ast.body) {
     if (declaration.type !== 'ImportDeclaration') continue;
     const src = declaration.source.value;
-    if (!['@playwright/test', 'node:fs', './helpers.mjs', './qualification.mjs'].includes(src))
+    if (!['@playwright/test', 'node:fs', './helpers.mjs', './qualification.mjs', './observation.mjs'].includes(src))
       reject(file + ': unknown executable import ' + src);
     if (src === '@playwright/test') {
       if (declaration.specifiers.some(s => s.type !== 'ImportSpecifier' ||
@@ -205,16 +224,37 @@ for (const file of files) {
   if (isSpec && (!hasNativeTest || !hasAuthorizedHelper))
     reject(file + ': native test or authorized helper import missing');
   if (!isSpec && hasAuthorizedHelper) reject(file + ': unauthorized helper usage');
+  const acquisitions = [];
+  walk(ast, node => {
+    if (node.type !== 'VariableDeclarator' ||
+        !identifier(node.id,'observation') ||
+        node.init?.type !== 'AwaitExpression' ||
+        node.init.argument.type !== 'CallExpression' ||
+        !identifier(node.init.argument.callee,'observe')) return;
+    const acquisition = node.init.argument;
+    if (acquisition.arguments.length !== 2 ||
+        acquisition.arguments[0].type !== 'Literal' ||
+        acquisition.arguments[1].type !== 'ArrowFunctionExpression' ||
+        !acquisition.arguments[1].async)
+      reject(file + ': invalid observation acquisition');
+    const parentTests = ownTests.filter(t =>
+      node.start >= t.callback.start && node.end <= t.callback.end);
+    if (parentTests.length !== 1 ||
+        acquisition.arguments[0].value !== parentTests[0].identity)
+      reject(file + ': observation identity/scope mismatch');
+    acquisitions.push(acquisition.arguments[0].value);
+  });
   const qualificationCalls = [];
   walk(ast, (node, parent) => {
     if (node.type !== 'CallExpression' || !identifier(node.callee, 'productAssertion')) return;
     if (!isSpec || !hasAuthorizedHelper || parent?.type !== 'AwaitExpression')
       reject(file + ': unauthorized or unawaited productAssertion');
-    if (node.arguments.length !== 2 || node.arguments[0].type !== 'Literal' ||
+    if (node.arguments.length !== 3 || node.arguments[0].type !== 'Literal' ||
         !qualifiedOrigin(node.arguments[0].value) ||
-        !['ArrowFunctionExpression', 'FunctionExpression'].includes(node.arguments[1].type))
-      reject(file + ': nonliteral/malformed qualification invocation');
-    forbidAcquisitionInAssertion(node.arguments[1], file, node.arguments[0].value);
+        !identifier(node.arguments[1], 'observation') ||
+        node.arguments[2].type !== 'ArrowFunctionExpression')
+      reject(file + ': malformed data-only qualification invocation');
+    qualifyOnlyPlainAssertions(node.arguments[2], file, node.arguments[0].value);
     const containing = ownTests.filter(t => node.start >= t.callback.start &&
                                             node.end <= t.callback.end);
     if (containing.length !== 1 || containing[0].identity !== node.arguments[0].value)
@@ -225,9 +265,11 @@ for (const file of files) {
     if (declarations.has(t.identity)) reject('Duplicate scenario declaration: ' + t.identity);
     if (qualificationCalls.filter(id => id === t.identity).length !== 1)
       reject(t.identity + ': exactly one authorized invocation required');
+    if (acquisitions.filter(id => id === t.identity).length !== 1)
+      reject(t.identity + ': exactly one acquired observation required');
     declarations.set(t.identity, file);
   }
-  if (qualificationCalls.length !== ownTests.length)
+  if (qualificationCalls.length !== ownTests.length || acquisitions.length !== ownTests.length)
     reject(file + ': ambiguous qualification call/declaration count');
 }
 if (!sawTestFile || declarations.size !== expected.size ||

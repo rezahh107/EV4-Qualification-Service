@@ -108,3 +108,53 @@ authoring-side control, not a general JavaScript effect system.
 RC-1 exact-Head gating, RC-2 fixture persistence reconciliation, the
 reserved-Step origin contract, Pro availability and the default-button
 **4.5:1** WCAG contrast threshold remain unchanged.
+
+## Full evidence-boundary repair (F-01 / F-02 / F-03)
+
+The authorized step for each of the 15 implemented catalog scenarios now consumes a
+JSON-safe **completed observation snapshot**, produced outside the step through
+`observe(identity, acquisition)`. Acquisitions and native-editor operations are
+not product proof. Acquisition receipts record `COMPLETE` and a SHA-256 of the
+snapshot only after successful serialization, or `UNAVAILABLE` on failure.
+
+A `productAssertion(identity, observation, snapshot => { ... })` has precisely
+one bounded native Playwright step. The callback is restricted by Acorn **8.18.0**
+to synchronous Playwright **value** matchers reading only `snapshot` and
+immutable loop variables; nested/browser calls, arbitrary helpers, async
+predicates, assignments, dynamic member access and unknown representations
+fail source qualification. Native Playwright's matcher error carries a
+structured `matcherResult.pass === false` discriminator: the qualified helper
+records `PRODUCT_FAIL` only then. Generic exceptions record `UNPROVEN`.
+The final runner requires both the unique reserved Step and matching
+observation/product receipts before admitting PASS/FAIL. This is deliberately
+not a universal JavaScript side-effect sandbox.
+
+The measurement/acquisition phase retains bounded Playwright auto-wait where
+needed (notably the native editor and duplicate/delete counts), then
+re-acquires the actual completed DOM observation. An observed negative count
+is product evidence; a failed browser transport is not. Completed C width and
+height, O HTTP and form visibility, A count transitions, K's exact ten widths
+and layout bounds, live native link/heading/class compatibility expectations,
+and measured 4.5:1 normal-text contrast remain explicitly asserted.
+
+### Structural native Elementor fixture storage
+
+A real Core **4.3.5** lab run established the saved Atomic Heading representation:
+`widgetType = e-heading`, `elType = widget`, and
+`settings.title = {"$$type":"escaped-html","value":"EV4 Atomic Heading"}`.
+The actual generated widget ID and its parent container ID are read back from
+the same run's `element-ids.json`; a unique matching node must have the
+correct type, parent, title and published post status. Malformed JSON, foreign
+IDs, unrelated string occurrences and wrong titles cannot qualify. Unknown
+title representations are `UNSUPPORTED` and prevent M from becoming
+`VERIFIED_PASS` rather than being guessed at. The only generated data
+included in the storage sample is a synthetic lab fixture, never customer data.
+
+Unknown/unavailable browser or WordPress provenance retains `NOT_PROVEN`;
+failed prerequisites do not upgrade dependent A/B/C/D/E/I/K/L/N statuses.
+Previously validated RC-1 exact commit provenance, independent CE workflows,
+scenario IDs and public result states are preserved. Result evidence adds
+structured `observation_state`, `product_assertion_state` and SHA-256 per
+executed scenario, while keeping the existing `assertion_origin` indicator.
+A lab CI failure may still truthfully represent the measured product contrast
+violation and is not necessarily a test-harness outage.

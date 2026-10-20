@@ -215,6 +215,32 @@ def qualified_steps(steps):
     return matched
 
 
+def read_qualification_receipts(identity):
+    """Independent structured proof from the same authorized acquisition/step."""
+    name = identity.replace(':', '__')
+    directory = ART / 'observation-provenance'
+    try:
+        observation = json.loads((directory / (name + '.observation.json')).read_text())
+        assertion = json.loads((directory / (name + '.assertion.json')).read_text())
+    except (OSError, ValueError, TypeError):
+        return {'observation_state': 'NOT_PROVEN', 'assertion_state': 'NOT_PROVEN'}
+    try:
+        serialized = json.dumps(observation['value'], separators=(',', ':'), ensure_ascii=False)
+        # JS JSON.stringify uses insertion-order keys and compact separators.
+        sha = hashlib.sha256(serialized.encode()).hexdigest()
+        valid = (observation.get('state') == 'COMPLETE' and
+                 observation.get('identity') == identity and
+                 re.fullmatch(r'[0-9a-f]{64}', observation['sha256']) and
+                 sha == observation['sha256'] and
+                 assertion.get('identity') == identity and
+                 assertion.get('observation_sha256') == sha)
+        return {'observation_state': 'COMPLETE' if valid else 'NOT_PROVEN',
+                'assertion_state': assertion.get('state') if valid else 'NOT_PROVEN',
+                'observation_sha256': sha if valid else None}
+    except (KeyError, TypeError, ValueError):
+        return {'observation_state': 'NOT_PROVEN', 'assertion_state': 'NOT_PROVEN'}
+
+
 def classify_playwright(report, result):
     """Require validated executable origin plus a single matching runtime step."""
     try:
@@ -246,9 +272,13 @@ def classify_playwright(report, result):
                        and identity in authorized)
             marker = reserved[0] if matches else None
             marker_failure = bool(marker and marker.get('error'))
-            if browser_state == 'passed' and matches and not marker_failure:
+            proof = read_qualification_receipts(identity)
+            proof_complete = proof['observation_state'] == 'COMPLETE'
+            if (browser_state == 'passed' and matches and not marker_failure and
+                    proof_complete and proof['assertion_state'] == 'PRODUCT_PASS'):
                 status = 'VERIFIED_PASS'
-            elif browser_state in ('failed', 'timedOut') and matches and marker_failure:
+            elif (browser_state in ('failed', 'timedOut') and matches and marker_failure and
+                  proof_complete and proof['assertion_state'] == 'PRODUCT_FAIL'):
                 status = 'VERIFIED_FAIL'
             elif browser_state == 'skipped' and not reserved:
                 status = 'NOT_EXECUTED'
@@ -259,6 +289,9 @@ def classify_playwright(report, result):
                 'qualified_step_count': len(reserved),
                 'qualified_step_failed': marker_failure,
                 'browser_state': browser_state,
+                'observation_state': proof['observation_state'],
+                'product_assertion_state': proof['assertion_state'],
+                'observation_sha256': proof.get('observation_sha256'),
                 'errors': [str(e.get('message',''))[:900] for e in final.get('errors', [])
                            if isinstance(e, dict)][:2]})
         for child in suite.get('suites', []):
@@ -279,25 +312,82 @@ def classify_playwright(report, result):
     return len(observed)
 
 
+def _inspect_atomic_document(raw, fixture_ids):
+    """Pinned Elementor 4.3.5 native V4 title format observed on installed lab."""
+    try:
+        document = json.loads(raw)
+    except (TypeError, ValueError):
+        return {'state': 'MISMATCH', 'reason': 'Malformed JSON persisted'}
+    if not isinstance(document, list):
+        return {'state': 'MISMATCH', 'reason': 'Elementor document must be a node list'}
+    atomic_id = fixture_ids.get('atomic')
+    container_id = fixture_ids.get('container')
+    if not all(isinstance(x, str) and re.fullmatch(r'[a-zA-Z0-9]{7,12}', x)
+               for x in (atomic_id, container_id)):
+        return {'state': 'UNSUPPORTED', 'reason': 'Generated element identity is unavailable'}
+    matching = []
+    def visit(nodes, parent=None):
+        for node in nodes:
+            if not isinstance(node, dict) or not isinstance(node.get('id'), str):
+                raise ValueError('Malformed Elementor document node')
+            if node['id'] == atomic_id:
+                matching.append((node, parent))
+            children = node.get('elements', [])
+            if not isinstance(children, list):
+                raise ValueError('Malformed Elementor children')
+            visit(children, node.get('id'))
+    try:
+        visit(document)
+    except (ValueError, RecursionError):
+        return {'state': 'MISMATCH', 'reason': 'Malformed nested Elementor element structure'}
+    if len(matching) != 1:
+        return {'state': 'MISMATCH', 'reason': 'Missing or ambiguous generated Atomic Heading ID'}
+    node, parent = matching[0]
+    if (parent != container_id or node.get('elType') != 'widget' or
+            node.get('widgetType') != 'e-heading'):
+        return {'state': 'MISMATCH', 'reason': 'Incorrect native heading type or parent'}
+    settings = node.get('settings')
+    if not isinstance(settings, dict):
+        return {'state': 'MISMATCH', 'reason': 'Native heading settings unavailable'}
+    title = settings.get('title')
+    # Exact actual observed Elementor Core 4.3.5 representation:
+    # {"$$type":"escaped-html","value":"EV4 Atomic Heading"}
+    if not isinstance(title, dict) or title.get('$$type') != 'escaped-html':
+        return {'state': 'UNSUPPORTED', 'reason': 'Unqualified title storage representation'}
+    if not isinstance(title.get('value'), str):
+        return {'state': 'MISMATCH', 'reason': 'Malformed native title value'}
+    if title['value'] != 'EV4 Atomic Heading':
+        return {'state': 'MISMATCH', 'reason': 'Native title content differs'}
+    return {'state': 'VERIFIED', 'atomic_data': True,
+            'generated_atomic_id': atomic_id, 'generated_container_id': container_id,
+            'title_type': 'escaped-html'}
+
+
 def probe_wordpress_persistence(post_id, fetch=wp):
-    """CLI errors are unavailability, not an observed data mismatch."""
+    """Transport, representation and persisted mismatch are distinct outcomes."""
+    try:
+        ids_path = ART / 'element-ids.json'
+        ids = json.loads(ids_path.read_text())
+        if not isinstance(ids, dict):
+            raise ValueError('Missing native element identity')
+    except (OSError, ValueError, TypeError) as exc:
+        return {'state': 'UNAVAILABLE', 'reason': 'Generated fixture identity not available',
+                'error': str(exc)[:400]}
     try:
         meta = fetch('post', 'meta', 'get', post_id, '_elementor_data')
         published = fetch('post', 'get', post_id, '--field=post_status')
-        # First-party synthetic fixture only; preserve exact raw document for
-        # a format-qualified structural persistence implementation.
-        ART.mkdir(parents=True, exist_ok=True)
-        (ART / 'native-storage-sample.json').write_text(json.dumps({
-            'fixture_post_id': post_id,
-            'raw_elementor_data': meta.strip(),
-            'post_status': published.strip(),
-        }, ensure_ascii=False, indent=2) + '\n')
     except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         return {'state': 'UNAVAILABLE', 'error': str(exc)[:800]}
-    atomic_data = 'e-heading' in meta and 'EV4 Atomic Heading' in meta
-    published_status = published.strip() == 'publish'
-    return {'state': 'VERIFIED' if atomic_data and published_status else 'MISMATCH',
-            'atomic_data': atomic_data, 'published': published_status}
+    ART.mkdir(parents=True, exist_ok=True)
+    (ART / 'native-storage-sample.json').write_text(json.dumps({
+        'fixture_post_id': post_id, 'generated_element_ids': ids,
+        'raw_elementor_data': meta.strip(), 'post_status': published.strip(),
+    }, ensure_ascii=False, indent=2) + '\n')
+    proof = _inspect_atomic_document(meta.strip(), ids)
+    proof['published'] = published.strip() == 'publish'
+    if proof['state'] == 'VERIFIED' and not proof['published']:
+        proof.update(state='MISMATCH', reason='Post is not published')
+    return proof
 
 
 def finalize_fixture_evidence(result, storage):

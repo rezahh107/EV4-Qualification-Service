@@ -5,6 +5,24 @@ import tempfile
 import unittest
 import lab
 
+def classify_synthetic_report(report, evidence):
+    """Unit-only: explicitly furnish simulated completed observation provenance."""
+    from unittest.mock import patch
+    def simulated_receipt(identity):
+        for suite in report.get('suites', []):
+            for spec in suite.get('specs', []):
+                if spec.get('title','').startswith('[' + identity + ']'):
+                    attempts = spec['tests'][0].get('results', [])
+                    steps = attempts[-1].get('steps', []) if attempts else []
+                    failed = any(step.get('error') for step in steps)
+                    return {'observation_state':'COMPLETE',
+                            'assertion_state':'PRODUCT_FAIL' if failed else 'PRODUCT_PASS',
+                            'observation_sha256':'synthetic-unit-evidence'}
+        return {'observation_state':'NOT_PROVEN', 'assertion_state':'NOT_PROVEN'}
+    with patch.object(lab,'read_qualification_receipts',side_effect=simulated_receipt):
+        return lab.classify_playwright(report,evidence)
+
+
 class LabTests(unittest.TestCase):
     def test_pinned_profile(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
@@ -38,7 +56,7 @@ class LabTests(unittest.TestCase):
 
         # Harness-level expect() error cannot impersonate a product assertion.
         without = target()
-        lab.classify_playwright(result_with_step('failed', {
+        classify_synthetic_report(result_with_step('failed', {
             'title': 'Harness prerequisite', 'category': 'test.step',
             'error': {'message': 'expect() failed in initialization'}}), without)
         self.assertEqual(status_of(without), 'NOT_PROVEN')
@@ -49,14 +67,14 @@ class LabTests(unittest.TestCase):
                      'error': {'message': 'Measured contrast 1.99 < 4.5'}}
         # Actual Playwright JSONReportTestStep does not serialize category.
         qualified.pop('category')
-        lab.classify_playwright(result_with_step('failed', qualified), with_step)
+        classify_synthetic_report(result_with_step('failed', qualified), with_step)
         self.assertEqual(status_of(with_step), 'VERIFIED_FAIL')
         self.assertEqual(next(x['observed']['assertion_origin'] for x in with_step['scenarios']
                               if x['test_identity'] == identity), 'EXPLICIT_PLAYWRIGHT_STEP')
 
         # A successful product assertion followed by a harness crash is unproven.
         late = target()
-        lab.classify_playwright(result_with_step('failed', {
+        classify_synthetic_report(result_with_step('failed', {
             'title': lab.QUALIFIED_STEP_PREFIX + identity, 'category': 'test.step'
         }), late)
         self.assertEqual(status_of(late), 'NOT_PROVEN')
@@ -135,15 +153,36 @@ class LabTests(unittest.TestCase):
                     lab.validate_qualification_coverage()
 
     def test_storage_probe_unavailable_is_not_mismatch(self):
-        def broken(*args):
-            raise RuntimeError('WP-CLI transport error')
-        self.assertEqual(lab.probe_wordpress_persistence('123', broken)['state'], 'UNAVAILABLE')
-        def mismatched(*args):
-            return '[{"widgetType":"e-heading","text":"EV4 Atomic Heading"}]' if 'meta' in args else 'draft'
-        self.assertEqual(lab.probe_wordpress_persistence('123', mismatched)['state'], 'MISMATCH')
-        def valid(*args):
-            return '[{"widgetType":"e-heading","text":"EV4 Atomic Heading"}]' if 'meta' in args else 'publish\n'
-        self.assertEqual(lab.probe_wordpress_persistence('123', valid)['state'], 'VERIFIED')
+        from unittest.mock import patch
+        ids = {'atomic':'2eb52f4', 'container':'5509617'}
+        good = json.dumps([{'id':'5509617','elType':'container','elements':[
+            {'id':'2eb52f4','elType':'widget','widgetType':'e-heading',
+             'settings':{'title':{'$$type':'escaped-html','value':'EV4 Atomic Heading'}}}
+        ]}])
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root/'element-ids.json').write_text(json.dumps(ids))
+            with patch.object(lab,'ART',root):
+                def transport(*args):
+                    raise RuntimeError('WP-CLI transport error')
+                self.assertEqual(lab.probe_wordpress_persistence('5',transport)['state'],'UNAVAILABLE')
+                def backend(raw,status='publish'):
+                    return lambda *args: raw if 'meta' in args else status
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(good))['state'],'VERIFIED')
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(good,'draft'))['state'],'MISMATCH')
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend('junk e-heading title EV4 Atomic Heading'))['state'],'MISMATCH')
+                unrelated = json.dumps([
+                    {'id':'5509617','elements':[{'id':'2eb52f4','elType':'widget',
+                     'widgetType':'e-heading','settings':{'title':{'$$type':'escaped-html','value':'Other'}}}]},
+                    {'id':'zzzzzzz','elType':'widget','widgetType':'heading',
+                     'settings':{'title':'EV4 Atomic Heading'}}
+                ])
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(unrelated))['state'],'MISMATCH')
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(good.replace('2eb52f4','aaaaaaa')))['state'],'MISMATCH')
+                unsupported = good.replace('escaped-html','html')
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(unsupported))['state'],'UNSUPPORTED')
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(good.replace('e-heading','heading')))['state'],'MISMATCH')
+                self.assertEqual(lab.probe_wordpress_persistence('5',backend(good.replace('EV4 Atomic Heading','Changed')))['state'],'MISMATCH')
 
     def test_fixture_finalization_downgrades_all_dependent_passes_and_keeps_browser_facts(self):
         p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
@@ -189,44 +228,28 @@ class LabTests(unittest.TestCase):
     def test_structural_spoof_falsification(self):
         from unittest.mock import patch
         original = (lab.ROOT / 'tests/native.spec.mjs').read_text()
-        call = """await productAssertion('C:measured-geometry', async () => {
-   expect(rect.height).toBeGreaterThan(5);
-  });"""
-        self.assertIn(call, original)
-
-        def check(corrupted):
+        marker = "await productAssertion('C:measured-geometry',observation,snapshot=>{"
+        self.assertIn(marker, original)
+        def reject(mutant):
             with tempfile.TemporaryDirectory() as folder:
                 root = Path(folder)
-                (root / 'tests').mkdir()
-                (root / 'tests/native.spec.mjs').write_text(corrupted)
-                for support in ('helpers.mjs', 'qualification.mjs'):
-                    (root / 'tests' / support).write_text(
-                        (lab.ROOT / 'tests' / support).read_text()
-                    )
-                with patch.object(lab, 'ROOT', root):
-                    with self.assertRaisesRegex(ValueError, 'Structural source qualification failed'):
+                (root/'tests').mkdir()
+                (root/'tests/native.spec.mjs').write_text(mutant)
+                for name in ('helpers.mjs','qualification.mjs','observation.mjs'):
+                    (root/'tests'/name).write_text((lab.ROOT/'tests'/name).read_text())
+                with patch.object(lab,'ROOT',root):
+                    with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
                         lab.validate_qualification_coverage()
-
-        # Comment contains exact old string marker, but no authorized executable call.
-        check(original.replace(call, """/* await productAssertion('C:measured-geometry' */
-  expect(rect.height).toBeGreaterThan(5);""", 1))
-
-        # A fake raw Playwright step cannot borrow an authorized source contract.
-        check(original.replace(call, """await test.step('EV4_PRODUCT_ASSERTION:C:measured-geometry', async () => {
-   expect(rect.height).toBeGreaterThan(5);
-  });""", 1))
-
-        # Indirect alias and computed property must fail (not merely literal title matching).
-        check(original.replace(call, """const forged = test['step'];
-  await forged('EV4_' + 'PRODUCT_ASSERTION:C:measured-geometry', async () => {
-    expect(rect.height).toBeGreaterThan(5);
-  });""", 1))
-
-        # Extra authorized invocation under same scenario is ambiguous.
-        check(original.replace(call, call + '\n ' + call, 1))
-        # The only invocation now carries a different identity.
-        check(original.replace("productAssertion('C:measured-geometry'",
-                               "productAssertion('D:atomic-semantic-heading'", 1))
+        reject(original.replace(marker, '// '+marker, 1))
+        reject(original.replace(marker, marker + "\n   await page.locator('h2').count();",1))
+        reject(original.replace(marker, marker + "\n   await page.locator('h2').first().evaluate(x=>x.innerText);",1))
+        reject(original.replace(marker, marker + "\n   await page['goto'](frontend);",1))
+        reject(original.replace(marker, marker + "\n   const indirect = () => page.locator('h2').count(); indirect();",1))
+        reject(original.replace(marker, marker + "\n   expect(snapshot.width).toBe(0); " + marker,1))
+        reject(original.replace("productAssertion('C:measured-geometry'",
+                                "productAssertion('D:atomic-semantic-heading'",1))
+        # Unsupported callbacks must fail closed, including pure JS computation.
+        reject(original.replace(marker, marker + "\n   throw new Error('unexpected');",1))
 
     def test_reserved_runtime_step_ambiguity_fails_closed(self):
         identity = 'L:contrast-aa-default-button'
@@ -234,7 +257,7 @@ class LabTests(unittest.TestCase):
             result = lab.template(lab.profile(lab.ROOT / 'profiles/core-4.3.5.json'), 'L')
             report = {'suites': [{'specs': [{'title': '[' + identity + '] measured',
                        'tests': [{'results': [{'status': state, 'steps': steps}]}]}]}]}
-            lab.classify_playwright(report, result)
+            classify_synthetic_report(report, result)
             return next(x for x in result['scenarios'] if x['test_identity'] == identity)
 
         marker = {'title': lab.QUALIFIED_STEP_PREFIX + identity,
@@ -260,7 +283,7 @@ class LabTests(unittest.TestCase):
                     'title':lab.QUALIFIED_STEP_PREFIX + identity,
                     'error': {'message':'4.5 required'}}]}]}]}
         report = {'suites':[{'specs':[spec, spec]}]}
-        self.assertEqual(lab.classify_playwright(report, r), 0)
+        self.assertEqual(classify_synthetic_report(report, r), 0)
         self.assertEqual(r['assertion_origin_error'].split(':')[0],
                          'Duplicate Playwright scenario result')
         self.assertTrue(all(x['status'] == 'NOT_PROVEN' for x in r['scenarios']
@@ -287,7 +310,7 @@ class LabTests(unittest.TestCase):
                 }]}],
             }]}]}
             evidence = lab.template(lab.profile(lab.ROOT / 'profiles/core-4.3.5.json'), 'K')
-            lab.classify_playwright(report, evidence)
+            classify_synthetic_report(report, evidence)
             return next(x for x in evidence['scenarios'] if x['test_identity'] == identity)
 
         # The operation never reached the authorized step. Error wording is irrelevant.
@@ -336,7 +359,7 @@ class LabTests(unittest.TestCase):
                 )
             with patch.object(lab, 'ROOT', root):
                 for identity, operation in calls:
-                    marker = "await productAssertion('" + identity + "', async () => {"
+                    marker = "await productAssertion('" + identity + "',observation,snapshot=>{"
                     self.assertIn(marker, original)
                     modified = original.replace(marker, marker + '\n' + operation, 1)
                     (root / 'tests/native.spec.mjs').write_text(modified)
@@ -347,6 +370,53 @@ class LabTests(unittest.TestCase):
                             lab.validate_qualification_coverage()
                 (root / 'tests/native.spec.mjs').write_text(original)
                 self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+
+    def test_provenance_gates_generic_callback_and_transport_errors(self):
+        from unittest.mock import patch
+        identity='C:measured-geometry'
+        p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
+        def outcome(browser_status, marker_error, assertion_state, observation_state='COMPLETE'):
+            candidate=lab.template(p,'C')
+            step={'title':lab.QUALIFIED_STEP_PREFIX + identity}
+            if marker_error: step['error']={'message':'simulated error'}
+            report={'suites':[{'specs':[{'title':'['+identity+'] geometry',
+                'tests':[{'results':[{'status':browser_status,'steps':[step]}]}]}]}]}
+            with patch.object(lab,'read_qualification_receipts',return_value={
+                'observation_state':observation_state,'assertion_state':assertion_state,
+                'observation_sha256':'falsification'}):
+                lab.classify_playwright(report,candidate)
+            return next(x['status'] for x in candidate['scenarios']
+                        if x['test_identity']==identity)
+        self.assertEqual(outcome('passed',False,'PRODUCT_PASS'),'VERIFIED_PASS')
+        self.assertEqual(outcome('failed',True,'PRODUCT_FAIL'),'VERIFIED_FAIL')
+        self.assertEqual(outcome('failed',True,'UNPROVEN'),'NOT_PROVEN')
+        self.assertEqual(outcome('failed',True,'PRODUCT_PASS'),'NOT_PROVEN')
+        self.assertEqual(outcome('failed',True,'PRODUCT_FAIL','NOT_PROVEN'),'NOT_PROVEN')
+        self.assertEqual(outcome('failed',False,'PRODUCT_PASS'),'NOT_PROVEN')
+
+    def test_receipts_bind_to_completed_data_and_identity(self):
+        from unittest.mock import patch
+        import hashlib
+        from unittest.mock import patch
+        value={'count':2,'width':4}
+        packed=json.dumps(value,separators=(',',':'),ensure_ascii=False)
+        checksum=hashlib.sha256(packed.encode()).hexdigest()
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            directory=root/'observation-provenance'
+            directory.mkdir()
+            key='C__measured-geometry'
+            o=directory/(key+'.observation.json')
+            a=directory/(key+'.assertion.json')
+            o.write_text(json.dumps({'state':'COMPLETE','identity':'C:measured-geometry',
+                                     'sha256':checksum,'value':value}))
+            a.write_text(json.dumps({'state':'PRODUCT_FAIL','identity':'C:measured-geometry',
+                                     'observation_sha256':checksum}))
+            with patch.object(lab,'ART',root):
+                self.assertEqual(lab.read_qualification_receipts('C:measured-geometry')['assertion_state'],'PRODUCT_FAIL')
+                o.write_text(json.dumps({'state':'COMPLETE','identity':'C:measured-geometry',
+                                         'sha256':checksum,'value':{'count':1}}))
+                self.assertEqual(lab.read_qualification_receipts('C:measured-geometry')['assertion_state'],'NOT_PROVEN')
 
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
