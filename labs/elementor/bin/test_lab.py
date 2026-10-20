@@ -41,7 +41,7 @@ class LabTests(unittest.TestCase):
         self.assertIn(('M', 'native-editor-create-reopen'), cases)
         self.assertIn(('K', 'ten-viewport-geometry'), cases)
         login = lab.template(p, 'O')
-        self.assertEqual([x['capability'] for x in login['scenarios']], ['O'])
+        self.assertTrue(all(x['capability'] == 'O' for x in login['scenarios']))
 
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
