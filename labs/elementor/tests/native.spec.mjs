@@ -156,3 +156,45 @@ test('[I:keyboard-native-link] native Elementor button works through keyboard',a
  await page.keyboard.press('Enter');
  await expect(page).toHaveURL(/#ev4-anchor$/);
 });
+
+
+test('[L:keyboard-and-contrast] Tab reachability and measured native link contrast',async({page})=>{
+ await page.goto(frontend);
+ const link=page.locator('.elementor-button-link[href="#ev4-anchor"]').first();
+ await expect(link).toBeVisible();
+ let tabReached=false;
+ for(let index=0;index<80;index++){
+   await page.keyboard.press('Tab');
+   if(await link.evaluate(node=>document.activeElement===node)){
+     tabReached=true;
+     break;
+   }
+ }
+ expect(tabReached,'Keyboard Tab must reach native link without scripting focus').toBe(true);
+ const colors=await link.evaluate(node=>{
+   const foreground=getComputedStyle(node).color;
+   let ancestor=node;
+   let background='rgba(0, 0, 0, 0)';
+   while(ancestor){
+     background=getComputedStyle(ancestor).backgroundColor;
+     if(!['rgba(0, 0, 0, 0)','transparent'].includes(background))break;
+     ancestor=ancestor.parentElement;
+   }
+   return {foreground,background};
+ });
+ function luminance(value){
+   const match=/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(value);
+   if(!match)throw new Error('Computed CSS color is not measurable: '+value);
+   const channels=match.slice(1).map(Number).map(x=>{
+     const scaled=x/255;
+     return scaled<=0.04045?scaled/12.92:((scaled+0.055)/1.055)**2.4;
+   });
+   return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+ }
+ const fg=luminance(colors.foreground);
+ const bg=luminance(colors.background);
+ const contrast=(Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05);
+ fs.mkdirSync('./artifacts',{recursive:true});
+ fs.writeFileSync('./artifacts/accessibility-contrast.json',JSON.stringify({...colors,contrast},null,2));
+ expect(contrast,'Measured WCAG AA normal-text contrast').toBeGreaterThanOrEqual(4.5);
+});
