@@ -38,9 +38,11 @@ A source-level fixture generated through the real running Elementor editor comma
 
 ## Current coverage boundary
 
-The catalog enumerates all areas A through O. Browser scripts include narrow real scenarios for A, B, C, D, I, K, L, M, N and O. They have NOT yet been proven to pass in an installed WordPress environment merely because their test files exist.
+The catalog explicitly accounts for all domains A through O; it does **not** claim exhaustive testing. On the exact observed [GitHub Actions run #39411240686](https://github.com/rezahh107/EV4-Qualification-Service/actions/runs/39411240686) for commit `6ab081d`, 14 real browser scenarios are `VERIFIED_PASS`, one real accessibility assertion is `VERIFIED_FAIL`, twelve catalog scenarios remain `NOT_EXECUTED` and one Pro-only scenario is `PRO_OR_LICENSE_UNAVAILABLE`.
 
-E (design-system classes/variables), F (components), G (positioning), H (media), J (dynamic content), the original native partial-color Heading question and other unimplemented scenarios remain NOT_EXECUTED. Pro loops require a lawful private Pro package and credentials. The current runner deliberately refuses additional arbitrary/unlicensed plugins. Generic sanitized target-profile configuration is not implemented and no TARGET_PROFILE_VERIFIED claim is made.
+Narrow verified cases exist for **A, B, C, D, E, I, K, L, M, N and O**. The E result proves native V4 Global Class attachment and persistence in the published frontend, **not** Variables or style precedence. F (Components), G (Positioning), H (Media) and J (Dynamic Content) have no executed assertions. The original single Atomic Heading with differently colored inline text remains `NOT_EXECUTED`, as do many subfeatures within the tested domains.
+
+No supplied lawful Elementor Pro license/package is available. No sanitized target-like profile has been executed and no `TARGET_PROFILE_VERIFIED` claim is made. The full GitHub job is intentionally failing because the default button fixture did not meet its text-contrast expectation; this observed product/environment finding must not be relabeled as a test-harness outage.
 
 ## GitHub Actions / LLM consumer
 
