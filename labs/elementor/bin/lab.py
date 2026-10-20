@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ART = ROOT / 'artifacts'
 CAT = ROOT / 'catalog.json'
 DOMAINS = 'ABCDEFGHIJKLMNO'
-FIXTURE_DEPENDENTS = frozenset('ABCDIKLN')
+FIXTURE_DEPENDENTS = frozenset('ABCDEIKLN')
 
 
 def digest(obj):

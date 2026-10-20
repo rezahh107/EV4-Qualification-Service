@@ -204,3 +204,35 @@ test('[L:contrast-aa-default-button] default Elementor button meets WCAG AA text
  fs.writeFileSync('./artifacts/accessibility-contrast.json',JSON.stringify({...colors,contrast},null,2));
  expect(contrast,'Measured WCAG AA normal-text contrast').toBeGreaterThanOrEqual(4.5);
 });
+
+
+test('[E:native-global-class-persistence] attach a real V4 global class and verify publication',async({page})=>{
+ const ids=JSON.parse(fs.readFileSync('./artifacts/element-ids.json','utf8'));
+ await page.goto('/wp-login.php');
+ await page.locator('#user_login').fill(process.env.LAB_ADMIN_USER||'admin');
+ await page.locator('#user_pass').fill(process.env.LAB_ADMIN_PASS||'password');
+ await page.locator('#wp-submit').click();
+ await expect(page).toHaveURL(/\/wp-admin\//);
+ await page.goto('/wp-admin/post.php?post='+postId+'&action=elementor');
+ const frame=page.frameLocator('#elementor-preview-iframe');
+ await expect(frame.locator('[data-id="'+ids.atomic+'"]')).toBeVisible({timeout:60000});
+ await page.evaluate(id=>{
+   const container=window.elementor?.getContainer(id);
+   if(!container||!window.$e?.run)throw new Error('Native editor selection interface absent');
+   window.$e.run('document/elements/select',{container});
+ },ids.atomic);
+ const style=page.locator('[id^="tab-"][id$="-style"]');
+ await expect(style).toBeVisible();
+ await style.click();
+ const input=page.locator('label',{hasText:'Classes'}).locator('../..').locator('input');
+ await expect(input).toBeVisible();
+ await input.fill('ev4-lab-shared');
+ await page.keyboard.press('Enter');
+ await expect(page.locator('[aria-label="Edit ev4-lab-shared"]')).toBeVisible();
+ const save=page.getByRole('button',{name:/^Publish$/i}).first();
+ await expect(save).toBeEnabled();
+ await save.click();
+ await expect(save).toBeDisabled({timeout:30000});
+ await page.goto(frontend);
+ await expect(page.locator('h2.e-heading-base').first()).toHaveClass(/ev4-lab-shared/);
+});

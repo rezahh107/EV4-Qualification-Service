@@ -68,6 +68,10 @@
         {
           "id": "classes-variables-precedence",
           "test": null
+        },
+        {
+          "id": "native-global-class-persistence",
+          "test": "E:native-global-class-persistence"
         }
       ]
     },
