@@ -293,6 +293,30 @@ for (const file of files) {
 if (!sawTestFile || declarations.size !== expected.size ||
     [...declarations.keys()].some(id => !expected.has(id)))
   reject('Executable test declarations do not match catalog identities');
+let contract;
+try { contract = JSON.parse(fs.readFileSync(path.join(root,'predicate-contract.json'),'utf8')); }
+catch { reject('Pinned predicate contract unavailable'); }
+if (contract.schema_version !== 1 ||
+    contract.source_profile !== 'core-4.3.5-wp-7.1.3' ||
+    JSON.stringify(Object.keys(contract.predicates).sort()) !==
+    JSON.stringify([...declarations.keys()].sort()))
+  reject('Predicate coverage manifest mismatch');
+for (const [id,hash] of Object.entries(predicateFingerprints)) {
+  if (contract.predicates[id] !== hash)
+    reject('Reviewed product predicate modified without approval: ' + id);
+}
+const helperBlobSums = {
+ 'qualification.mjs': '34d5608d48d38d3eae9662bf3e5b4756ed0397e0',
+ 'observation.mjs': '323ef6c96c47e79a4371684c6b09539eee91442b',
+};
+for (const [filename, reviewed] of Object.entries(helperBlobSums)) {
+  const bytes=fs.readFileSync(path.join(testDir,filename));
+  const actual=crypto.createHash('sha1')
+    .update(Buffer.from('blob '+bytes.length+'\0'))
+    .update(bytes).digest('hex');
+  if (actual !== reviewed) reject('Evidence receipt helper identity modified: '+filename);
+}
+
 process.stdout.write(JSON.stringify({
   qualified:[...declarations.keys()].sort(),
   predicate_fingerprints:predicateFingerprints

@@ -144,7 +144,10 @@ class LabTests(unittest.TestCase):
                 "await productAssertion('L:contrast-aa-default-button'",
                 "await unqualifiedAssertion('L:contrast-aa-default-button'", 1)
             (root / 'tests/native.spec.mjs').write_text(corrupted)
-            for support in ('helpers.mjs', 'qualification.mjs'):
+            (root / 'predicate-contract.json').write_text(
+                (lab.ROOT / 'predicate-contract.json').read_text()
+            )
+            for support in ('helpers.mjs', 'qualification.mjs', 'observation.mjs'):
                 (root / 'tests' / support).write_text(
                     (lab.ROOT / 'tests' / support).read_text()
                 )
@@ -235,6 +238,9 @@ class LabTests(unittest.TestCase):
                 root = Path(folder)
                 (root/'tests').mkdir()
                 (root/'tests/native.spec.mjs').write_text(mutant)
+                (root/'predicate-contract.json').write_text(
+                    (lab.ROOT/'predicate-contract.json').read_text()
+                )
                 for name in ('helpers.mjs','qualification.mjs','observation.mjs'):
                     (root/'tests'/name).write_text((lab.ROOT/'tests'/name).read_text())
                 with patch.object(lab,'ROOT',root):
@@ -353,7 +359,10 @@ class LabTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'tests').mkdir()
-            for support in ('helpers.mjs', 'qualification.mjs'):
+            (root / 'predicate-contract.json').write_text(
+                (lab.ROOT / 'predicate-contract.json').read_text()
+            )
+            for support in ('helpers.mjs', 'qualification.mjs', 'observation.mjs'):
                 (root / 'tests' / support).write_text(
                     (lab.ROOT / 'tests' / support).read_text()
                 )

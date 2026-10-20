@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_profile": "core-4.3.5-wp-7.1.3",
+  "predicates": {
+    "A:native-duplicate-delete": "dfc2f10de7ffd585b2e5fabfb8e3ac7a816103250911c302b9864ae542933936",
+    "A:native-parent-child": "10adba5035610edfae3c69586c80ddbdf639d5da686100628752cee3c502574b",
+    "B:native-flex-container": "86fda15fb968306a76461997d7d47521d4b7ff201d366591884481edee00e4e8",
+    "C:measured-geometry": "5a1780e5385db0fe7ec6d51faba120a349febd6242670650765dab48de7a2d54",
+    "D:atomic-semantic-heading": "d2c66e36904d2492cf5eecd5ca415c0b99f35e42ffc805ca3aad8fd56c9f6649",
+    "E:native-global-class-persistence": "f21ec6ceb59df3dafd7d8201e31e7b6b9c7ead44bfc6cf4c9174376c30691161",
+    "I:keyboard-native-link": "a8e9c929a3fdece4c621115027cde1783768bef7120615681fa06ab2c0c97c0a",
+    "I:native-link-activation": "9d68fa54c911e12d930a6832163019629990ae8e84fcf8e25b02f1fa80cad2db",
+    "K:ten-viewport-geometry": "fbfe005bf1efd17d779483d95b160f7c5789dafbc4d2a92ef52cc7299d1a0344",
+    "L:contrast-aa-default-button": "4791005ca28abf9aa7ffe7b937408d7394e00dcd06df0920206fda6361bb6fe1",
+    "L:keyboard-tab-reachability": "9bf9d8f08f04a2c77f77851a02c0c418f85a6ad1dde14ec462824b280b9fb95e",
+    "L:semantic-heading-name": "d0b71acb550ff0e97ab03b02a46fe3be60e849cf861bf49a9e936a87ea5e0235",
+    "M:native-editor-create-reopen": "f3be1227ea5723d96eef6593518f7713a546644a93a7283f44bff760a49e1233",
+    "N:atomic-and-legacy-coexist": "c2f9c62f55c2748e0a0aeff7d9efa65170b22fc44f946bda383caba6118ae056",
+    "O:installed-runtime-browser": "b26863deee7ecdc2281605d1d122e654e5bedbc4b666a8a014e838da3cc2f175"
+  }
+}
