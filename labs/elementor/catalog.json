@@ -154,7 +154,7 @@
         },
         {
           "id": "keyboard-and-contrast",
-          "test": null
+          "test": "L:keyboard-and-contrast"
         }
       ]
     },
