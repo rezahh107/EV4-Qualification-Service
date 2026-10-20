@@ -16,9 +16,8 @@ on:
       profile:
         description: 'Checked-in, sanitized profile file'
         required: true
-        type: choice
+        type: string
         default: core-4.3.5
-        options: [core-4.3.5]
 
 permissions:
   contents: read
@@ -47,7 +46,8 @@ jobs:
         env:
           CAPABILITY: ${{ github.event_name == 'workflow_dispatch' && inputs.capability || 'all' }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability "$CAPABILITY"
+          PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'core-4.3.5' }}
+        run: python3 bin/lab.py run --profile "profiles/$PROFILE.json" --capability "$CAPABILITY"
       - name: Publish evidence even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
