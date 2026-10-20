@@ -33,14 +33,14 @@ test('[M:native-editor-create-reopen] actual Elementor editor authoring and pers
  await page.reload();
  await expect(frame.locator('[data-id="'+ids.atomic+'"] h2')).toContainText(title,{timeout:60000});
  await page.goto(frontend);
- await expect(page.locator('.e-heading-base h2').first()).toHaveText(title);
+ await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
  fs.mkdirSync('./artifacts',{recursive:true});
  fs.writeFileSync('./artifacts/element-ids.json',JSON.stringify(ids,null,2));
 });
 
 test('[A:native-parent-child] actual published V4 element retains parent',async({page})=>{
  await page.goto(frontend);
- const heading=page.locator('.e-heading-base h2').first();
+ const heading=page.locator('h2.e-heading-base').first();
  await expect(heading).toHaveText(title);
  const data=await heading.evaluate(node=>{
    const widget=node.closest('.elementor-element');
@@ -63,7 +63,7 @@ test('[B:native-flex-container] native published flex layout is computed',async(
 
 test('[C:measured-geometry] published heading occupies nonzero bounds',async({page})=>{
  await page.goto(frontend);
- const rect=await page.locator('.e-heading-base h2').first().boundingBox();
+ const rect=await page.locator('h2.e-heading-base').first().boundingBox();
  expect(rect).not.toBeNull();
  expect(rect.width).toBeGreaterThan(5);
  expect(rect.height).toBeGreaterThan(5);
@@ -72,7 +72,7 @@ test('[C:measured-geometry] published heading occupies nonzero bounds',async({pa
 test('[D:atomic-semantic-heading] atomic widget uses semantic H2',async({page})=>{
  await page.goto(frontend);
  await expect(page.getByRole('heading',{name:title,level:2})).toBeVisible();
- await expect(page.locator('.e-heading-base h2').first()).toHaveText(title);
+ await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
 });
 
 test('[I:native-link-activation] native Elementor link activates anchor',async({page})=>{
@@ -89,7 +89,7 @@ test('[K:ten-viewport-geometry] real DOM responsive measurements',async({page})=
  for(const width of widths){
    await page.setViewportSize({width,height:900});
    await page.goto(frontend);
-   const measurement=await page.locator('.e-heading-base h2').first().evaluate(node=>{
+   const measurement=await page.locator('h2.e-heading-base').first().evaluate(node=>{
       const r=node.getBoundingClientRect();
       return {x:r.x,right:r.right,height:r.height,
         viewport:window.innerWidth,documentWidth:document.documentElement.scrollWidth};
@@ -114,6 +114,6 @@ test('[L:semantic-heading-name] accessible name and heading element',async({page
 
 test('[N:atomic-and-legacy-coexist] two generations render on one page',async({page})=>{
  await page.goto(frontend);
- await expect(page.locator('.e-heading-base h2').first()).toHaveText(title);
+ await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
  await expect(page.locator('.elementor-widget-heading .elementor-heading-title').first()).toBeVisible();
 });

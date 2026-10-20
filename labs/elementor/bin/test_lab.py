@@ -34,6 +34,15 @@ class LabTests(unittest.TestCase):
         b=make()
         lab.classify_playwright(report('Browser context crashed'),b)
         self.assertEqual(b['scenarios'][0]['status'],'NOT_PROVEN')
+    def test_targeted_execution_includes_authoring_dependency(self):
+        p = lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
+        responsive = lab.template(p, 'K')
+        cases = {(x['capability'], x['scenario']) for x in responsive['scenarios']}
+        self.assertIn(('M', 'native-editor-create-reopen'), cases)
+        self.assertIn(('K', 'ten-viewport-geometry'), cases)
+        login = lab.template(p, 'O')
+        self.assertEqual([x['capability'] for x in login['scenarios']], ['O'])
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]

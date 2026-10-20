@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ART = ROOT / 'artifacts'
 CAT = ROOT / 'catalog.json'
 DOMAINS = 'ABCDEFGHIJKLMNO'
+FIXTURE_DEPENDENTS = frozenset('ABCDIKLN')
 
 
 def digest(obj):
@@ -128,7 +129,9 @@ def runtime(p):
 def template(p, selected):
     scenarios = []
     for domain in catalog()['domains']:
-        if selected not in ('all', domain['id']):
+        if selected not in ('all', domain['id']) and not (
+            selected in FIXTURE_DEPENDENTS and domain['id'] == 'M'
+        ):
             continue
         for s in domain['scenarios']:
             scenarios.append({'capability': domain['id'], 'scenario': s['id'],
@@ -231,7 +234,8 @@ def execute(p, selected):
                                                'test_sha256': r['test_sha256'], 'catalog_sha256': digest(CAT.read_bytes())})
         cmd = [binary('playwright'), 'test', '--config=playwright.config.mjs']
         if selected != 'all':
-            cmd.extend(['--grep', r'^\[(?:M|' + selected + r'):'])
+            selector = '(?:M|' + selected + ')' if selected in FIXTURE_DEPENDENTS else selected
+            cmd.extend(['--grep', r'^\[' + selector + ':'])
         stage = 'browser'
         test = command(cmd, env=env, timeout=1200, allow_fail=True)
         (ART / 'playwright-console.log').write_text((test.stdout + '\n' + test.stderr)[-40000:])
