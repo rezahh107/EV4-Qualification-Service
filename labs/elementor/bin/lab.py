@@ -287,6 +287,15 @@ def execute(p, selected):
                 if item['test_identity'] == 'K:ten-viewport-geometry' and item['status'] == 'VERIFIED_PASS':
                     item['observed']['geometry'] = json.loads(geometry.read_text())
                     item['expected'] = {'no_page_horizontal_overflow': True, 'visible_atomic_heading': True}
+        contrast_evidence = ART / 'accessibility-contrast.json'
+        if contrast_evidence.is_file():
+            measured = json.loads(contrast_evidence.read_text())
+            for item in r['scenarios']:
+                if item['test_identity'] == 'L:contrast-aa-default-button':
+                    observed = item['observed'] or {}
+                    observed['measured_css'] = measured
+                    item['observed'] = observed
+                    item['expected'] = {'minimum_normal_text_contrast_ratio': 4.5}
         r['environment_fingerprint'] = digest({
             'requested': p, 'installed': r['installed'],
             'test_sha256': r['test_sha256'],
