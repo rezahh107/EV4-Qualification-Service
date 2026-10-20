@@ -199,6 +199,13 @@ def validate_qualification_coverage():
         raise ValueError('Structural qualification output invalid') from exc
     if accepted != expected:
         raise ValueError('Parser-qualified declarations differ from catalog')
+    # Temporary qualification instrumentation: bind the accepted predicate AST
+    # representation before locking the reviewed manifest at the next Head.
+    if 'predicate_fingerprints' in json.loads(checked.stdout):
+        ART.mkdir(parents=True, exist_ok=True)
+        (ART / 'predicate-fingerprints-observed.json').write_text(
+            json.dumps(json.loads(checked.stdout)['predicate_fingerprints'],
+                       sort_keys=True, indent=2) + '\n')
     return {item: True for item in accepted}
 
 

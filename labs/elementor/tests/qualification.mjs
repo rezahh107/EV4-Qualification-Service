@@ -25,7 +25,7 @@ export async function productAssertion(identity, observation, assertProduct) {
     } catch (error) {
       // matcherResult is a structured Playwright Expect failure discriminator.
       // A generic TypeError, transport error or harness crash is not product failure.
-      const isMatcherFailure = error?.matcherResult?.pass === false;
+      const isMatcherFailure = typeof error?.matcherResult?.pass === 'boolean';
       writeReceipt(identity, 'assertion', {
         state:isMatcherFailure ? 'PRODUCT_FAIL' : 'UNPROVEN',
         identity, observation_sha256:receipt.sha256,

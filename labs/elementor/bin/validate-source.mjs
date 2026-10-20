@@ -2,6 +2,7 @@
 // Structural source contract for the existing Playwright/Elementor lab.
 // AST nodes, not source text or comments, decide who may create qualification steps.
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { parse } from 'acorn';
 
@@ -74,6 +75,22 @@ function pureValue(n, known) {
       pureValue(x.value, known));
   return false;
 }
+function canonicalSyntax(node) {
+  if (Array.isArray(node)) return node.map(canonicalSyntax);
+  if (!node || typeof node !== 'object') return node;
+  const result={};
+  for (const [key,value] of Object.entries(node)) {
+    if (['start','end','raw','loc','range'].includes(key)) continue;
+    result[key]=canonicalSyntax(value);
+  }
+  return result;
+}
+function predicateFingerprint(callback) {
+  return crypto.createHash('sha256')
+    .update(JSON.stringify(canonicalSyntax(callback.body))).digest('hex');
+}
+const predicateFingerprints = {};
+
 function qualifyOnlyPlainAssertions(callback, file, identity) {
   if (callback.async || callback.generator || callback.params.length !== 1 ||
       !identifier(callback.params[0], 'snapshot') || callback.body.type !== 'BlockStatement')
@@ -255,6 +272,7 @@ for (const file of files) {
         node.arguments[2].type !== 'ArrowFunctionExpression')
       reject(file + ': malformed data-only qualification invocation');
     qualifyOnlyPlainAssertions(node.arguments[2], file, node.arguments[0].value);
+    predicateFingerprints[node.arguments[0].value] = predicateFingerprint(node.arguments[2]);
     const containing = ownTests.filter(t => node.start >= t.callback.start &&
                                             node.end <= t.callback.end);
     if (containing.length !== 1 || containing[0].identity !== node.arguments[0].value)
@@ -275,4 +293,7 @@ for (const file of files) {
 if (!sawTestFile || declarations.size !== expected.size ||
     [...declarations.keys()].some(id => !expected.has(id)))
   reject('Executable test declarations do not match catalog identities');
-process.stdout.write(JSON.stringify({qualified:[...declarations.keys()].sort()}) + '\n');
+process.stdout.write(JSON.stringify({
+  qualified:[...declarations.keys()].sort(),
+  predicate_fingerprints:predicateFingerprints
+}) + '\n');
