@@ -62,3 +62,7 @@ A matching historical result is REVIEW_REQUIRED, never automatic production-site
 - https://github.com/elementor/elementor/blob/main/tests/test-environment-setup.md
 
 The official Elementor development test setup uses source builds and hidden experiments. This lab instead points at released Elementor ZIPs.
+
+## Recorded baseline accessibility finding (2026-10-20)
+
+The released Core + Hello Elementor fixture renders the native legacy button with foreground rgb(255,255,255) and background rgb(97,206,112), approximately 1.99:1 contrast. This is a deliberately retained **VERIFIED_FAIL** against WCAG AA 4.5:1 normal-text contrast in this exact profile, not a harness failure or a domain-wide Elementor conclusion. Keyboard Tab reachability is a separate positive scenario so its PASS is not hidden by the contrast failure. Source execution: https://github.com/rezahh107/EV4-Qualification-Service/actions/runs/39410361085. Do not change the contrast threshold or fixture design merely to turn this observation green.

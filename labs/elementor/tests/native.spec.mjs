@@ -158,19 +158,25 @@ test('[I:keyboard-native-link] native Elementor button works through keyboard',a
 });
 
 
-test('[L:keyboard-and-contrast] Tab reachability and measured native link contrast',async({page})=>{
+test('[L:keyboard-tab-reachability] the native Elementor link is reachable with Tab',async({page})=>{
  await page.goto(frontend);
  const link=page.locator('.elementor-button-link[href="#ev4-anchor"]').first();
  await expect(link).toBeVisible();
- let tabReached=false;
+ let reached=false;
  for(let index=0;index<80;index++){
    await page.keyboard.press('Tab');
    if(await link.evaluate(node=>document.activeElement===node)){
-     tabReached=true;
+     reached=true;
      break;
    }
  }
- expect(tabReached,'Keyboard Tab must reach native link without scripting focus').toBe(true);
+ expect(reached,'Tab must reach the link without scripting focus').toBe(true);
+});
+
+test('[L:contrast-aa-default-button] default Elementor button meets WCAG AA text contrast',async({page})=>{
+ await page.goto(frontend);
+ const link=page.locator('.elementor-button-link[href="#ev4-anchor"]').first();
+ await expect(link).toBeVisible();
  const colors=await link.evaluate(node=>{
    const foreground=getComputedStyle(node).color;
    let ancestor=node;

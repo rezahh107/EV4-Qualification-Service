@@ -153,8 +153,12 @@
           "test": "L:semantic-heading-name"
         },
         {
-          "id": "keyboard-and-contrast",
-          "test": "L:keyboard-and-contrast"
+          "id": "keyboard-tab-reachability",
+          "test": "L:keyboard-tab-reachability"
+        },
+        {
+          "id": "contrast-aa-default-button",
+          "test": "L:contrast-aa-default-button"
         }
       ]
     },
