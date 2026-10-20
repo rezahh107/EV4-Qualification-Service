@@ -126,8 +126,12 @@ class LabTests(unittest.TestCase):
                 "await productAssertion('L:contrast-aa-default-button'",
                 "await unqualifiedAssertion('L:contrast-aa-default-button'", 1)
             (root / 'tests/native.spec.mjs').write_text(corrupted)
+            for support in ('helpers.mjs', 'qualification.mjs'):
+                (root / 'tests' / support).write_text(
+                    (lab.ROOT / 'tests' / support).read_text()
+                )
             with patch.object(lab, 'ROOT', root):
-                with self.assertRaisesRegex(ValueError, 'Missing qualified assertion'):
+                with self.assertRaisesRegex(ValueError, 'Structural source qualification failed'):
                     lab.validate_qualification_coverage()
 
     def test_storage_probe_unavailable_is_not_mismatch(self):
@@ -181,6 +185,70 @@ class LabTests(unittest.TestCase):
                             if x['test_identity'] and x['test_identity'] != 'L:contrast-aa-default-button'))
         self.assertTrue(r['installed']['atomic_editor_observed'])
         self.assertIn('elementor_storage',r)
+
+    def test_structural_spoof_falsification(self):
+        from unittest.mock import patch
+        original = (lab.ROOT / 'tests/native.spec.mjs').read_text()
+        call = """await productAssertion('C:measured-geometry', async () => {
+   expect(rect.height).toBeGreaterThan(5);
+  });"""
+        self.assertIn(call, original)
+
+        def check(corrupted):
+            with tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                (root / 'tests').mkdir()
+                (root / 'tests/native.spec.mjs').write_text(corrupted)
+                for support in ('helpers.mjs', 'qualification.mjs'):
+                    (root / 'tests' / support).write_text(
+                        (lab.ROOT / 'tests' / support).read_text()
+                    )
+                with patch.object(lab, 'ROOT', root):
+                    with self.assertRaisesRegex(ValueError, 'Structural source qualification failed'):
+                        lab.validate_qualification_coverage()
+
+        # Comment contains exact old string marker, but no authorized executable call.
+        check(original.replace(call, """/* await productAssertion('C:measured-geometry' */
+  expect(rect.height).toBeGreaterThan(5);""", 1))
+
+        # A fake raw Playwright step cannot borrow an authorized source contract.
+        check(original.replace(call, """await test.step('EV4_PRODUCT_ASSERTION:C:measured-geometry', async () => {
+   expect(rect.height).toBeGreaterThan(5);
+  });""", 1))
+
+        # Indirect alias and computed property must fail (not merely literal title matching).
+        check(original.replace(call, """const forged = test['step'];
+  await forged('EV4_' + 'PRODUCT_ASSERTION:C:measured-geometry', async () => {
+    expect(rect.height).toBeGreaterThan(5);
+  });""", 1))
+
+        # Extra authorized invocation under same scenario is ambiguous.
+        check(original.replace(call, call + '\n ' + call, 1))
+        # The only invocation now carries a different identity.
+        check(original.replace("productAssertion('C:measured-geometry'",
+                               "productAssertion('D:atomic-semantic-heading'", 1))
+
+    def test_reserved_runtime_step_ambiguity_fails_closed(self):
+        identity = 'L:contrast-aa-default-button'
+        def classify(state, steps):
+            result = lab.template(lab.profile(lab.ROOT / 'profiles/core-4.3.5.json'), 'L')
+            report = {'suites': [{'specs': [{'title': '[' + identity + '] measured',
+                       'tests': [{'results': [{'status': state, 'steps': steps}]}]}]}]}
+            lab.classify_playwright(report, result)
+            return next(x for x in result['scenarios'] if x['test_identity'] == identity)
+
+        marker = {'title': lab.QUALIFIED_STEP_PREFIX + identity,
+                  'error': {'message': 'real contrast below 4.5'}}
+        other = {'title': lab.QUALIFIED_STEP_PREFIX + 'A:native-parent-child',
+                 'error': {'message': 'forged'}}
+        self.assertEqual(classify('failed', [marker])['status'], 'VERIFIED_FAIL')
+        self.assertEqual(classify('passed', [{'title': marker['title']}])['status'], 'VERIFIED_PASS')
+        self.assertEqual(classify('failed', [marker, marker])['status'], 'NOT_PROVEN')
+        self.assertEqual(classify('failed', [marker, other])['status'], 'NOT_PROVEN')
+        self.assertEqual(classify('failed', [other])['status'], 'NOT_PROVEN')
+        self.assertEqual(classify('failed', [{'title': marker['title']},
+                       {'title': 'Harness assertion', 'error': {'message': 'expect()'}}])['status'],
+                       'NOT_PROVEN')
 
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')

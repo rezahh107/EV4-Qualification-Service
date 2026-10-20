@@ -98,7 +98,7 @@ def wp_env_profile(p):
 
 
 def test_hash():
-    paths = [ROOT / 'bin/lab.py', ROOT / 'playwright.config.mjs',
+    paths = [ROOT / 'bin/lab.py', ROOT / 'bin/validate-source.mjs', ROOT / 'playwright.config.mjs',
              ROOT / 'package.json', CAT, *sorted((ROOT / 'tests').glob('*.mjs'))]
     return digest(b''.join(
         p.relative_to(ROOT).as_posix().encode() + b'\0' + p.read_bytes()
@@ -178,45 +178,53 @@ def template(p, selected):
 
 
 
+
 def validate_qualification_coverage():
-    """Require an explicit qualification wrapper for every executable catalog case."""
-    expected = {scenario['test'] for domain in catalog()['domains']
-                for scenario in domain['scenarios'] if scenario['test']}
-    defined = {}
-    for path in sorted((ROOT / 'tests').glob('*.spec.mjs')):
-        source = path.read_text(encoding='utf-8')
-        patterns = list(re.finditer(r"test\('\[([A-O]:[a-z0-9-]+)\]", source))
-        for index, match in enumerate(patterns):
-            key = match.group(1)
-            if key in defined:
-                raise ValueError('Duplicate catalog test implementation: ' + key)
-            last = patterns[index + 1].start() if index + 1 < len(patterns) else len(source)
-            body = source[match.end():last]
-            marker = "await productAssertion('" + key + "'"
-            if marker not in body:
-                raise ValueError('Missing qualified assertion for ' + key)
-            defined[key] = path.name
-    if set(defined) != expected:
-        raise ValueError('Missing/unregistered catalog qualification cases: '
-                         + repr(sorted(set(defined) ^ expected)))
-    return defined
+    """Use pinned executable-AST source contract, never raw marker substrings."""
+    expected = sorted(x['test'] for domain in catalog()['domains']
+                      for x in domain['scenarios'] if x['test'])
+    script = Path(__file__).resolve().parent / 'validate-source.mjs'
+    try:
+        run = subprocess.run(
+            ['node', str(script), str(ROOT), json.dumps(expected)],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+    except OSError as exc:
+        raise ValueError('Structural source parser unavailable') from exc
+    if run.returncode:
+        raise ValueError('Structural source qualification failed: ' + run.stderr[-1500:])
+    try:
+        accepted = json.loads(run.stdout)['qualified']
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ValueError('Structural qualification output invalid') from exc
+    if accepted != expected:
+        raise ValueError('Parser-qualified declarations differ from catalog')
+    return {item: True for item in accepted}
 
 
-def qualified_steps(steps, identity):
-    matches = []
+def qualified_steps(steps):
+    """Collect every reserved step, including duplicates and mismatched identities."""
+    matched = []
     for step in steps:
         if not isinstance(step, dict):
             continue
-        # JSON Reporter serializes test.step title/error/children, not category.
-        # The exact reserved step title is produced by productAssertion().
-        if step.get('title') == QUALIFIED_STEP_PREFIX + identity:
-            matches.append(step)
-        matches.extend(qualified_steps(step.get('steps', []), identity))
-    return matches
+        title = step.get('title')
+        if isinstance(title, str) and title.startswith(QUALIFIED_STEP_PREFIX):
+            matched.append(step)
+        matched.extend(qualified_steps(step.get('steps', [])))
+    return matched
 
 
 def classify_playwright(report, result):
-    """Only structured failed qualification steps can prove a product failure."""
+    """Require validated executable origin plus a single matching runtime step."""
+    try:
+        authorized = validate_qualification_coverage()
+    except (ValueError, OSError) as exc:
+        result['source_contract_error'] = str(exc)[:1500]
+        for scenario in result['scenarios']:
+            if scenario['test_identity']:
+                scenario['status'] = 'NOT_PROVEN'
+        return 0
     observed = {}
     def visit(suite):
         for spec in suite.get('specs', []):
@@ -231,34 +239,36 @@ def classify_playwright(report, result):
                 raise ValueError('Ambiguous Playwright result cardinality: ' + identity)
             attempts = test_records[0].get('results', [])
             final = attempts[-1] if attempts else {}
-            browser_status = final.get('status', 'skipped')
-            marker_steps = qualified_steps(final.get('steps', []), identity)
-            marker_failure = any('error' in step and step['error'] for step in marker_steps)
-            marker_clear = bool(marker_steps) and all(not step.get('error') for step in marker_steps)
-            if browser_status == 'passed' and marker_clear:
+            browser_state = final.get('status', 'skipped')
+            reserved = qualified_steps(final.get('steps', []))
+            matches = (len(reserved) == 1
+                       and reserved[0].get('title') == QUALIFIED_STEP_PREFIX + identity
+                       and identity in authorized)
+            marker = reserved[0] if matches else None
+            marker_failure = bool(marker and marker.get('error'))
+            if browser_state == 'passed' and matches and not marker_failure:
                 status = 'VERIFIED_PASS'
-            elif browser_status in ('failed', 'timedOut') and marker_failure:
+            elif browser_state in ('failed', 'timedOut') and matches and marker_failure:
                 status = 'VERIFIED_FAIL'
-            elif browser_status == 'skipped':
+            elif browser_state == 'skipped' and not reserved:
                 status = 'NOT_EXECUTED'
             else:
                 status = 'NOT_PROVEN'
-            observed[identity] = (
-                status, browser_status,
-                {'assertion_origin': 'EXPLICIT_PLAYWRIGHT_STEP' if marker_steps else 'UNCLASSIFIED',
-                 'qualified_step_count': len(marker_steps),
-                 'qualified_step_failed': marker_failure,
-                 'browser_state': browser_status,
-                 'errors': [str(e.get('message', ''))[:900] for e in final.get('errors', [])
-                            if isinstance(e, dict)][:2]})
+            observed[identity] = (status, {
+                'assertion_origin': 'EXPLICIT_PLAYWRIGHT_STEP' if matches else 'UNCLASSIFIED',
+                'qualified_step_count': len(reserved),
+                'qualified_step_failed': marker_failure,
+                'browser_state': browser_state,
+                'errors': [str(e.get('message',''))[:900] for e in final.get('errors', [])
+                           if isinstance(e, dict)][:2]})
         for child in suite.get('suites', []):
             visit(child)
     for suite in report.get('suites', []):
         visit(suite)
     for item in result['scenarios']:
         if item['test_identity'] in observed:
-            state, _browser_status, evidence = observed[item['test_identity']]
-            item.update(status=state, observed=evidence)
+            status, evidence = observed[item['test_identity']]
+            item.update(status=status, observed=evidence)
     return len(observed)
 
 
@@ -376,7 +386,9 @@ def execute(p, selected):
         command([binary('wp-env'), 'start'], env=env, timeout=900)
         started = True
         os.environ.update({k: env[k] for k in ('WP_ENV_HOME', 'WP_ENV_PORT')})
+        stage = 'source_validation'
         validate_qualification_coverage()
+        stage = 'provisioning'
         r['installed'] = runtime(p)
         for attempt in range(40):
             try:
@@ -440,10 +452,15 @@ def execute(p, selected):
             r['setup_error'] = 'Playwright returned failure without recognizable assertion'
     except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as e:
         r['setup_error'] = str(e)[:2000]
-        if stage == 'provisioning':
-            for s in r['scenarios']:
-                if s['test_identity']:
-                    s['status'] = 'ENVIRONMENT_UNAVAILABLE'
+        if stage == 'source_validation':
+            r['source_contract_error'] = str(e)[:1500]
+            for item in r['scenarios']:
+                if item['test_identity']:
+                    item['status'] = 'NOT_PROVEN'
+        elif stage == 'provisioning':
+            for item in r['scenarios']:
+                if item['test_identity']:
+                    item['status'] = 'ENVIRONMENT_UNAVAILABLE'
     finally:
         try:
             if started:
