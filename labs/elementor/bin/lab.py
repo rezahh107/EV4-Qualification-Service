@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -75,7 +76,12 @@ def wp_env_profile(p):
 
 
 def test_hash():
-    return digest(b''.join(x.name.encode() + b'\0' + x.read_bytes() for x in sorted((ROOT / 'tests').glob('*.spec.mjs'))))
+    paths = [ROOT / 'bin/lab.py', ROOT / 'playwright.config.mjs',
+             ROOT / 'package.json', CAT, *sorted((ROOT / 'tests').glob('*.mjs'))]
+    return digest(b''.join(
+        p.relative_to(ROOT).as_posix().encode() + b'\0' + p.read_bytes()
+        for p in paths
+    ))
 
 
 def binary(name):
@@ -139,7 +145,9 @@ def template(p, selected):
                               'status': 'PRO_OR_LICENSE_UNAVAILABLE' if s.get('requires_pro') else 'NOT_EXECUTED',
                               'observed': None})
     return {'schema_version': 1, 'requested': p, 'profile_sha256': digest(p), 'test_sha256': test_hash(),
-            'source_commit': os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'), 'github_run': os.getenv('GITHUB_RUN_ID'),
+            'source_commit': os.getenv('SOURCE_SHA') or os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'),
+            'checkout_commit': os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'),
+            'github_run': os.getenv('GITHUB_RUN_ID'),
             'github_attempt': os.getenv('GITHUB_RUN_ATTEMPT'), 'scope': p['scope'],
             'installed': None, 'environment_fingerprint': None, 'execution': 'NOT_EXECUTED',
             'setup_error': None, 'teardown': 'NOT_EXECUTED', 'scenarios': scenarios}
@@ -212,11 +220,21 @@ def finish(result):
            for s in result['scenarios']]
     md += ['', 'Scenario PASS does not establish full-domain, site, or WCAG qualification.']
     (ART / 'summary.md').write_text('\n'.join(md) + '\n')
+    print('LAB_EXECUTION: ' + result['execution'])
+    if result['setup_error']:
+        print('LAB_ERROR: ' + result['setup_error'])
+    for item in result['scenarios']:
+        print(item['capability'] + ':' + item['scenario'] + ' = ' + item['status'])
 
 
 def execute(p, selected):
     r = template(p, selected)
-    ART.mkdir(exist_ok=True)
+    # A previous run's Playwright JSON must NEVER qualify a new execution.
+    if ART.is_symlink():
+        raise ValueError('Refusing symlinked artifact directory')
+    if ART.exists():
+        shutil.rmtree(ART)
+    ART.mkdir(parents=True, exist_ok=True)
     (ROOT / '.wp-env.json').write_text(json.dumps(wp_env_profile(p), indent=2) + '\n')
     env = os.environ.copy()
     env.update(WP_ENV_HOME=str((ROOT / '.lab-state' / 'wp-env').resolve()), WP_ENV_PORT='8888',
@@ -257,6 +275,23 @@ def execute(p, selected):
         if not report.is_file() or not classify_playwright(json.loads(report.read_text()), r):
             r['setup_error'] = 'No recognizable executed Playwright scenario evidence'
         bind_fixture_precondition(r)
+        browser = ART / 'browser.json'
+        if browser.is_file():
+            r['installed']['browser'] = json.loads(browser.read_text())
+        if any(s['test_identity'] == 'M:native-editor-create-reopen' and
+               s['status'] == 'VERIFIED_PASS' for s in r['scenarios']):
+            r['installed']['atomic_editor_observed'] = True
+        geometry = ART / 'responsive-geometry.json'
+        if geometry.is_file():
+            for item in r['scenarios']:
+                if item['test_identity'] == 'K:ten-viewport-geometry' and item['status'] == 'VERIFIED_PASS':
+                    item['observed']['geometry'] = json.loads(geometry.read_text())
+                    item['expected'] = {'no_page_horizontal_overflow': True, 'visible_atomic_heading': True}
+        r['environment_fingerprint'] = digest({
+            'requested': p, 'installed': r['installed'],
+            'test_sha256': r['test_sha256'],
+            'catalog_sha256': digest(CAT.read_bytes())
+        })
         if any(s['scenario'] == 'native-editor-create-reopen' and s['status'] == 'VERIFIED_PASS' for s in r['scenarios']):
             meta = wp('post', 'meta', 'get', ids[0], '_elementor_data')
             published = wp('post', 'get', ids[0], '--field=post_status')

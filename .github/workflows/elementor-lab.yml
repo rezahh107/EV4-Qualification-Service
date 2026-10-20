@@ -46,6 +46,7 @@ jobs:
       - name: Run real WordPress + Elementor lab
         env:
           CAPABILITY: ${{ github.event_name == 'workflow_dispatch' && inputs.capability || 'all' }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability "$CAPABILITY"
       - name: Publish evidence even on failure
         if: always()

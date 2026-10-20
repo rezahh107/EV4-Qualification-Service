@@ -12,6 +12,10 @@
         {
           "id": "movement-duplication-deletion",
           "test": null
+        },
+        {
+          "id": "native-duplicate-delete",
+          "test": "A:native-duplicate-delete"
         }
       ]
     },
@@ -108,6 +112,10 @@
         {
           "id": "hover-focus-and-forms",
           "test": null
+        },
+        {
+          "id": "keyboard-native-link",
+          "test": "I:keyboard-native-link"
         }
       ]
     },

@@ -6,7 +6,9 @@ const postId = process.env.LAB_PAGE_ID;
 const title = 'EV4 Atomic Heading';
 const frontend = '/?page_id=' + postId;
 
-test('[O:installed-runtime-browser] real WordPress HTTP form responds',async({page})=>{
+test('[O:installed-runtime-browser] real WordPress HTTP form responds',async({page,browser})=>{
+ fs.mkdirSync('./artifacts',{recursive:true});
+ fs.writeFileSync('./artifacts/browser.json',JSON.stringify({engine:'chromium',version:browser.version()},null,2));
  const response=await page.goto('/wp-login.php');
  expect(response?.status()).toBe(200);
  await expect(page.locator('#user_login')).toBeVisible();
@@ -114,4 +116,43 @@ test('[N:atomic-and-legacy-coexist] two generations render on one page',async({p
  await page.goto(frontend);
  await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
  await expect(page.locator('.elementor-widget-heading .elementor-heading-title').first()).toBeVisible();
+});
+
+
+test('[A:native-duplicate-delete] native Atomic duplicate and delete in real editor',async({page})=>{
+ const ids=JSON.parse(fs.readFileSync('./artifacts/element-ids.json','utf8'));
+ await page.goto('/wp-login.php');
+ await page.locator('#user_login').fill(process.env.LAB_ADMIN_USER||'admin');
+ await page.locator('#user_pass').fill(process.env.LAB_ADMIN_PASS||'password');
+ await page.locator('#wp-submit').click();
+ await expect(page).toHaveURL(/\/wp-admin\//);
+ await page.goto('/wp-admin/post.php?post='+postId+'&action=elementor');
+ const frame=page.frameLocator('#elementor-preview-iframe');
+ const headings=frame.locator('h2.e-heading-base');
+ await expect(headings).toHaveCount(1,{timeout:60000});
+ const duplicated=await page.evaluate(id=>{
+   const container=window.elementor?.getContainer(id);
+   if(!container||!window.$e?.run)throw new Error('Elementor editor command unavailable');
+   const result=window.$e.run('document/elements/duplicate',{container});
+   if(!result?.id)throw new Error('Duplicate command returned no native element');
+   return result.id;
+ },ids.atomic);
+ await expect(headings).toHaveCount(2);
+ await page.evaluate(id=>{
+   const container=window.elementor.getContainer(id);
+   if(!container)throw new Error('Duplicated editor container not found for deletion');
+   window.$e.run('document/elements/delete',{container});
+ },duplicated);
+ await expect(headings).toHaveCount(1);
+ await expect(headings).toContainText([title]);
+});
+
+test('[I:keyboard-native-link] native Elementor button works through keyboard',async({page})=>{
+ await page.goto(frontend);
+ const link=page.locator('.elementor-button-link[href="#ev4-anchor"]').first();
+ await expect(link).toBeVisible();
+ await link.focus();
+ await expect(link).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(page).toHaveURL(/#ev4-anchor$/);
 });
