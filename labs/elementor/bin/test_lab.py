@@ -57,6 +57,22 @@ class LabTests(unittest.TestCase):
             helper.flush()
             self.assertNotEqual(before, lab.test_hash())
 
+    def test_sanitized_public_plugin_and_target_profile_configuration(self):
+        p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
+        p['theme']={'slug':'astra','version':'4.11.15'}
+        p['plugins']=[{'slug':'woocommerce','version':'10.3.3'}]
+        p['scope']='TARGET_PROFILE_VERIFIED'
+        with tempfile.TemporaryDirectory(dir=lab.ROOT/'profiles') as d:
+            path=Path(d)/'profile.json'
+            path.write_text(json.dumps(p))
+            parsed=lab.profile(path)
+            config=lab.wp_env_profile(parsed)
+            self.assertIn('astra.4.11.15.zip',config['themes'][0])
+            self.assertIn('woocommerce.10.3.3.zip',config['plugins'][1])
+            result=lab.template(parsed,'O')
+            self.assertEqual(result['scope'],'NOT_PROVEN')
+            self.assertEqual(result['requested_scope'],'TARGET_PROFILE_VERIFIED')
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]

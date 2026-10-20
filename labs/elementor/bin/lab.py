@@ -37,13 +37,26 @@ def profile(path):
     for key in ('wordpress', 'php', 'mariadb', 'elementor'):
         if not re.fullmatch(r'\d+(?:\.\d+){1,3}', p[key]):
             raise ValueError('Unpinned version: ' + key)
-    if p['theme']['slug'] != 'hello-elementor' or not re.fullmatch(r'\d+\.\d+\.\d+', p['theme']['version']):
-        raise ValueError('Unknown theme build')
-    if p['plugins'] or p['features'] != {'atomic_editor': 'released-default-not-assumed-verified'}:
-        raise ValueError('No unverified plugin/experiment inputs in core profile')
+    def valid_package(package):
+        return (isinstance(package, dict) and
+                set(package) == {'slug', 'version'} and
+                isinstance(package['slug'], str) and
+                bool(re.fullmatch(r'[a-z][a-z0-9-]{1,60}', package['slug'])) and
+                isinstance(package['version'], str) and
+                bool(re.fullmatch(r'\d+(?:\.\d+){1,3}', package['version'])))
+    if not valid_package(p['theme']):
+        raise ValueError('Theme must identify a pinned WordPress.org release')
+    if (not isinstance(p['plugins'], list) or len(p['plugins']) > 10 or
+            any(not valid_package(plugin) for plugin in p['plugins'])):
+        raise ValueError('Plugins must identify pinned WordPress.org releases')
+    slugs = [plugin['slug'] for plugin in p['plugins']]
+    if len(slugs) != len(set(slugs)) or any(slug in ('elementor', 'elementor-pro') for slug in slugs):
+        raise ValueError('Duplicate or commercial/overriding plugins forbidden')
+    if p['features'] != {'atomic_editor': 'released-default-not-assumed-verified'}:
+        raise ValueError('Unsupported feature toggles/hidden experiments forbidden')
     if not all(type(w) is int and 240 <= w <= 4000 for w in p['breakpoints']):
         raise ValueError('Invalid breakpoints')
-    if p['scope'] != 'GENERAL_LAB_VERIFIED':
+    if p['scope'] not in ('GENERAL_LAB_VERIFIED', 'TARGET_PROFILE_VERIFIED'):
         raise ValueError('Invalid claim scope')
     return p
 
@@ -69,8 +82,11 @@ def wp_env_profile(p):
     return {'$schema': 'https://schemas.wp.org/trunk/wp-env.json',
             'core': 'https://wordpress.org/wordpress-' + p['wordpress'] + '.zip',
             'phpVersion': p['php'], 'mariadbVersion': p['mariadb'],
-            'plugins': ['https://downloads.wordpress.org/plugin/elementor.' + p['elementor'] + '.zip'],
-            'themes': ['https://downloads.wordpress.org/theme/hello-elementor.' + p['theme']['version'] + '.zip'],
+            'plugins': ['https://downloads.wordpress.org/plugin/elementor.' + p['elementor'] + '.zip'] +
+                       ['https://downloads.wordpress.org/plugin/' + plugin['slug'] + '.' +
+                        plugin['version'] + '.zip' for plugin in p['plugins']],
+            'themes': ['https://downloads.wordpress.org/theme/' + p['theme']['slug'] + '.' +
+                       p['theme']['version'] + '.zip'],
             'config': {'WP_DEBUG': False, 'SCRIPT_DEBUG': False, 'WP_AUTO_UPDATE_CORE': False,
                        'AUTOMATIC_UPDATER_DISABLED': True}}
 
@@ -110,10 +126,10 @@ def single_version(text):
 
 
 def runtime(p):
-    wp('theme', 'activate', 'hello-elementor')
+    wp('theme', 'activate', p['theme']['slug'])
     actual = {'wordpress': single_version(wp('core', 'version')),
               'elementor': single_version(wp('plugin', 'get', 'elementor', '--field=version')),
-              'theme': single_version(wp('theme', 'get', 'hello-elementor', '--field=version')),
+              'theme': single_version(wp('theme', 'get', p['theme']['slug'], '--field=version')),
               'php': single_version(wp('eval', 'echo PHP_VERSION;'))}
     db = wp('db', 'query', 'SELECT VERSION();', '--skip-column-names')
     match = re.search(r'\b(\d+\.\d+\.\d+)-MariaDB', db)
@@ -129,6 +145,12 @@ def runtime(p):
     for key in ('php', 'mariadb'):
         if not actual[key].startswith(p[key] + '.'):
             raise RuntimeError('Wrong ' + key + ' family: ' + actual[key])
+    for plugin in p['plugins']:
+        slug = plugin['slug']
+        actual['plugin:' + slug] = single_version(wp('plugin', 'get', slug, '--field=version'))
+        if actual['plugin:' + slug] != plugin['version']:
+            raise RuntimeError('Supporting plugin version mismatch: ' + slug)
+        wp('plugin', 'is-active', slug)
     return actual
 
 
@@ -148,7 +170,8 @@ def template(p, selected):
             'source_commit': os.getenv('SOURCE_SHA') or os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'),
             'checkout_commit': os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'),
             'github_run': os.getenv('GITHUB_RUN_ID'),
-            'github_attempt': os.getenv('GITHUB_RUN_ATTEMPT'), 'scope': p['scope'],
+            'github_attempt': os.getenv('GITHUB_RUN_ATTEMPT'), 'requested_scope': p['scope'],
+            'scope': 'NOT_PROVEN',
             'installed': None, 'environment_fingerprint': None, 'execution': 'NOT_EXECUTED',
             'setup_error': None, 'teardown': 'NOT_EXECUTED', 'scenarios': scenarios}
 
@@ -211,6 +234,8 @@ def finish(result):
         result['execution'] = 'INCOMPLETE'
     else:
         result['execution'] = 'VERIFIED_PASS'
+    if result['execution'] == 'VERIFIED_PASS':
+        result['scope'] = result['requested_scope']
     ART.mkdir(parents=True, exist_ok=True)
     (ART / 'result.json').write_text(json.dumps(result, indent=2, ensure_ascii=False) + '\n')
     md = ['# Elementor Lab Evidence', '', 'Execution: ' + result['execution'],

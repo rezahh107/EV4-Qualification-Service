@@ -40,7 +40,7 @@ A source-level fixture generated through the real running Elementor editor comma
 
 The catalog enumerates all areas A through O. Browser scripts include narrow real scenarios for A, B, C, D, I, K, L, M, N and O. They have NOT yet been proven to pass in an installed WordPress environment merely because their test files exist.
 
-E (design-system classes/variables), F (components), G (positioning), H (media), J (dynamic content), the original native partial-color Heading question and other unimplemented scenarios remain NOT_EXECUTED. Pro loops require a lawful private Pro package and credentials. The current runner deliberately refuses additional arbitrary/unlicensed plugins. Generic sanitized target-profile configuration is not implemented and no TARGET_PROFILE_VERIFIED claim is made.
+E (design-system classes/variables), F (components), G (positioning), H (media), J (dynamic content), the original native partial-color Heading question and other unimplemented scenarios remain NOT_EXECUTED. Pro loops require a lawful private Pro package and credentials. The runner accepts explicitly checked-in, sanitized public WordPress.org plugins and themes with exact requested release versions; it refuses commercial Elementor Pro as a public plugin. Arbitrary private packages and unsupported feature toggles remain unavailable. No actual target-site profile has been supplied or runtime-qualified, so no TARGET_PROFILE_VERIFIED claim is made.
 
 ## GitHub Actions / LLM consumer
 
@@ -52,7 +52,7 @@ For a local maintainer to assess prior artifact identity only:
 
     python3 bin/lab.py reuse --profile profiles/core-4.3.5.json --evidence artifacts/result.json
 
-A matching historical result is REVIEW_REQUIRED, never automatic production-site verification.
+A matching historical result is REVIEW_REQUIRED, never automatic production-site verification. Test identity covers the runner, helpers, catalog, browser tests, Playwright configuration, and direct package manifest; stale JSON/HTML artifacts are cleared before each new execution.
 
 ## References
 
