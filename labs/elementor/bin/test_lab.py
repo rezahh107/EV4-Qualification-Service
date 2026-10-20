@@ -250,6 +250,29 @@ class LabTests(unittest.TestCase):
                        {'title': 'Harness assertion', 'error': {'message': 'expect()'}}])['status'],
                        'NOT_PROVEN')
 
+    def test_ambiguous_report_and_source_contract_fail_closed(self):
+        from unittest.mock import patch
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        r = lab.template(p, 'L')
+        identity = 'L:contrast-aa-default-button'
+        spec = {'title': '[' + identity + '] qualified',
+                'tests': [{'results': [{'status':'failed','steps':[{
+                    'title':lab.QUALIFIED_STEP_PREFIX + identity,
+                    'error': {'message':'4.5 required'}}]}]}]}
+        report = {'suites':[{'specs':[spec, spec]}]}
+        self.assertEqual(lab.classify_playwright(report, r), 0)
+        self.assertEqual(r['assertion_origin_error'].split(':')[0],
+                         'Duplicate Playwright scenario result')
+        self.assertTrue(all(x['status'] == 'NOT_PROVEN' for x in r['scenarios']
+                            if x['test_identity']))
+        r['provenance_verified'] = True
+        r['installed'] = {'wordpress':'7.1.3'}
+        r['teardown'] = 'VERIFIED'
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.object(lab, 'ART', Path(temp)):
+                lab.finish(r)
+        self.assertEqual(r['execution'], 'NOT_PROVEN')
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]
