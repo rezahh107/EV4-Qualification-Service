@@ -48,6 +48,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Validate lab runner and evidence boundary
         run: python3 -m unittest discover -s bin -p 'test_*.py' -v
+      - name: Falsify observation and matcher-origin boundaries
+        run: npx playwright test --config=bin/origin-playwright.config.mjs
       - name: Run real WordPress + Elementor lab
         env:
           CAPABILITY: ${{ github.event_name == 'workflow_dispatch' && inputs.capability || 'all' }}
