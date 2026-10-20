@@ -23,17 +23,42 @@ class LabTests(unittest.TestCase):
             path.write_text((lab.ROOT/'profiles/core-4.3.5.json').read_text())
             with self.assertRaises(ValueError):
                 lab.profile(path)
-    def test_qualify_assertion_not_harness_crash(self):
-        def report(message):
-            return {'suites':[{'specs':[{'title':'[D:atomic-semantic-heading] test',
-                'tests':[{'results':[{'status':'failed','errors':[{'message':message}]}]}]}]}]}
-        make=lambda:lab.template(lab.profile(lab.ROOT/'profiles/core-4.3.5.json'),'D')
-        a=make()
-        lab.classify_playwright(report('AssertionError expect(locator)'),a)
-        self.assertEqual(a['scenarios'][0]['status'],'VERIFIED_FAIL')
-        b=make()
-        lab.classify_playwright(report('Browser context crashed'),b)
-        self.assertEqual(b['scenarios'][0]['status'],'NOT_PROVEN')
+    def test_assertion_origin_not_error_text(self):
+        identity = 'L:contrast-aa-default-button'
+        def result_with_step(status, step, message='AssertionError expect(locator)'):
+            return {'suites': [{'specs': [{'title': '[' + identity + '] check',
+                'tests': [{'results': [{'status': status,
+                    'errors': [{'message': message}],
+                    'steps': [step] if step is not None else []}]}]}]}]}
+        def target():
+            return lab.template(lab.profile(lab.ROOT/'profiles/core-4.3.5.json'), 'L')
+        def status_of(candidate):
+            return next(x['status'] for x in candidate['scenarios']
+                        if x['test_identity'] == identity)
+
+        # Harness-level expect() error cannot impersonate a product assertion.
+        without = target()
+        lab.classify_playwright(result_with_step('failed', {
+            'title': 'Harness prerequisite', 'category': 'test.step',
+            'error': {'message': 'expect() failed in initialization'}}), without)
+        self.assertEqual(status_of(without), 'NOT_PROVEN')
+
+        with_step = target()
+        qualified = {'title': lab.QUALIFIED_STEP_PREFIX + identity,
+                     'category': 'test.step',
+                     'error': {'message': 'Measured contrast 1.99 < 4.5'}}
+        lab.classify_playwright(result_with_step('failed', qualified), with_step)
+        self.assertEqual(status_of(with_step), 'VERIFIED_FAIL')
+        self.assertEqual(next(x['observed']['assertion_origin'] for x in with_step['scenarios']
+                              if x['test_identity'] == identity), 'EXPLICIT_PLAYWRIGHT_STEP')
+
+        # A successful product assertion followed by a harness crash is unproven.
+        late = target()
+        lab.classify_playwright(result_with_step('failed', {
+            'title': lab.QUALIFIED_STEP_PREFIX + identity, 'category': 'test.step'
+        }), late)
+        self.assertEqual(status_of(late), 'NOT_PROVEN')
+
     def test_targeted_execution_includes_authoring_dependency(self):
         p = lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         responsive = lab.template(p, 'K')
@@ -56,6 +81,103 @@ class LabTests(unittest.TestCase):
             helper.write('export const sentinel = 2;')
             helper.flush()
             self.assertNotEqual(before, lab.test_hash())
+
+    def test_exact_head_checkout_falsifies_equal_tree_different_commit(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as td:
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=td, text=True).strip()
+            git('init')
+            git('config', 'user.name', 'EV4 Test')
+            git('config', 'user.email', 'ev4-test@example.invalid')
+            (Path(td) / 'fixture.txt').write_text('unchanged')
+            git('add', 'fixture.txt')
+            git('commit', '-m', 'first')
+            first = lab.actual_git_checkout(Path(td))
+            tree_first = git('rev-parse', 'HEAD^{tree}')
+            git('commit', '--allow-empty', '-m', 'second')
+            second = lab.actual_git_checkout(Path(td))
+            self.assertNotEqual(first, second)
+            self.assertEqual(tree_first, git('rev-parse', 'HEAD^{tree}'))
+            self.assertEqual(lab.require_exact_checkout(second, second), second)
+            with self.assertRaisesRegex(RuntimeError, 'does not match'):
+                lab.require_exact_checkout(first, second)
+            with self.assertRaisesRegex(RuntimeError, 'absent or invalid'):
+                lab.require_exact_checkout(None, second)
+
+    def test_workflow_binds_expected_and_actual_head(self):
+        flow = (lab.ROOT.parent.parent / '.github/workflows/elementor-lab.yml').read_text()
+        self.assertIn('ref: ${{ github.event.pull_request.head.sha || github.sha }}', flow)
+        self.assertIn('verify-checkout --expected "$EXPECTED_SOURCE_SHA"', flow)
+        self.assertIn('EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}', flow)
+
+    def test_catalog_qualified_assertion_coverage(self):
+        expected = {s['test'] for d in lab.catalog()['domains']
+                    for s in d['scenarios'] if s['test']}
+        self.assertEqual(set(lab.validate_qualification_coverage()), expected)
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / 'tests').mkdir()
+            original = (lab.ROOT / 'tests/native.spec.mjs').read_text()
+            corrupted = original.replace(
+                "await productAssertion('L:contrast-aa-default-button'",
+                "await unqualifiedAssertion('L:contrast-aa-default-button'", 1)
+            (root / 'tests/native.spec.mjs').write_text(corrupted)
+            with patch.object(lab, 'ROOT', root):
+                with self.assertRaisesRegex(ValueError, 'Missing qualified assertion'):
+                    lab.validate_qualification_coverage()
+
+    def test_storage_probe_unavailable_is_not_mismatch(self):
+        def broken(*args):
+            raise RuntimeError('WP-CLI transport error')
+        self.assertEqual(lab.probe_wordpress_persistence('123', broken)['state'], 'UNAVAILABLE')
+        def mismatched(*args):
+            return '[{"widgetType":"e-heading","text":"EV4 Atomic Heading"}]' if 'meta' in args else 'draft'
+        self.assertEqual(lab.probe_wordpress_persistence('123', mismatched)['state'], 'MISMATCH')
+        def valid(*args):
+            return '[{"widgetType":"e-heading","text":"EV4 Atomic Heading"}]' if 'meta' in args else 'publish\n'
+        self.assertEqual(lab.probe_wordpress_persistence('123', valid)['state'], 'VERIFIED')
+
+    def test_fixture_finalization_downgrades_all_dependent_passes_and_keeps_browser_facts(self):
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        for storage, final in (({'state':'UNAVAILABLE','error':'WP-CLI failed'}, 'NOT_PROVEN'),
+                               ({'state':'MISMATCH','atomic_data':False,'published':True}, 'VERIFIED_FAIL')):
+            r = lab.template(p,'all')
+            r['installed'] = {'wordpress':'7.1.3'}
+            for item in r['scenarios']:
+                if item['test_identity'] and item['capability'] in lab.FIXTURE_DEPENDENTS:
+                    item['status'] = 'VERIFIED_PASS'
+                    item['observed'] = {'browser_assertion':'passed'}
+                if item['test_identity'] == 'O:installed-runtime-browser':
+                    item['status'] = 'VERIFIED_PASS'
+            lab.finalize_fixture_evidence(r, storage)
+            fixture = next(x for x in r['scenarios'] if x['test_identity'] == 'M:native-editor-create-reopen')
+            self.assertEqual(fixture['status'], final)
+            self.assertEqual(fixture['observed']['browser_status'], 'VERIFIED_PASS')
+            dependents = [x for x in r['scenarios'] if x['capability'] in lab.FIXTURE_DEPENDENTS and x['test_identity']]
+            self.assertTrue(all(x['status'] == 'NOT_PROVEN' for x in dependents))
+            self.assertTrue(all(x['observed']['browser_status'] == 'VERIFIED_PASS' for x in dependents))
+            self.assertNotIn('elementor_storage', r)
+            self.assertNotIn('atomic_editor_observed', r['installed'])
+            self.assertEqual(next(x['status'] for x in r['scenarios']
+                                  if x['test_identity']=='O:installed-runtime-browser'), 'VERIFIED_PASS')
+
+    def test_valid_fixture_does_not_hide_independent_accessibility_failure(self):
+        r = lab.template(lab.profile(lab.ROOT / 'profiles/core-4.3.5.json'),'all')
+        r['installed'] = {'wordpress':'7.1.3'}
+        for item in r['scenarios']:
+            if item['test_identity']:
+                item['status'] = ('VERIFIED_FAIL' if item['test_identity']=='L:contrast-aa-default-button'
+                                  else 'VERIFIED_PASS')
+                item['observed'] = {'browser_assertion':'measured'}
+        lab.finalize_fixture_evidence(r, {'state':'VERIFIED','published':True,'atomic_data':True})
+        self.assertEqual(next(x['status'] for x in r['scenarios']
+                              if x['test_identity']=='L:contrast-aa-default-button'), 'VERIFIED_FAIL')
+        self.assertTrue(all(x['status']=='VERIFIED_PASS' for x in r['scenarios']
+                            if x['test_identity'] and x['test_identity'] != 'L:contrast-aa-default-button'))
+        self.assertTrue(r['installed']['atomic_editor_observed'])
+        self.assertIn('elementor_storage',r)
 
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')

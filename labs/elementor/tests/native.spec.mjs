@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import { createAtomicFixture } from './helpers.mjs';
+import { productAssertion } from './qualification.mjs';
 
 const postId = process.env.LAB_PAGE_ID;
 const title = 'EV4 Atomic Heading';
@@ -12,7 +13,9 @@ test('[O:installed-runtime-browser] real WordPress HTTP form responds',async({pa
  const response=await page.goto('/wp-login.php');
  expect(response?.status()).toBe(200);
  await expect(page.locator('#user_login')).toBeVisible();
- await expect(page.locator('#user_pass')).toBeVisible();
+ await productAssertion('O:installed-runtime-browser', async () => {
+   await expect(page.locator('#user_pass')).toBeVisible();
+  });
 });
 
 test('[M:native-editor-create-reopen] actual Elementor editor authoring and persistence',async({page})=>{
@@ -34,7 +37,9 @@ test('[M:native-editor-create-reopen] actual Elementor editor authoring and pers
  await page.reload();
  await expect(frame.locator('[data-id="'+ids.atomic+'"] h2')).toContainText(title,{timeout:60000});
  await page.goto(frontend);
- await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
+ await productAssertion('M:native-editor-create-reopen', async () => {
+   await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
+  });
  fs.mkdirSync('./artifacts',{recursive:true});
  fs.writeFileSync('./artifacts/element-ids.json',JSON.stringify(ids,null,2));
 });
@@ -49,7 +54,9 @@ test('[A:native-parent-child] actual published V4 element retains parent',async(
    return {atomicId:node.getAttribute('data-interaction-id'),
       parentId:parent?.getAttribute('data-id')};
  });
- expect(data).toEqual({atomicId:ids.atomic,parentId:ids.container});
+ await productAssertion('A:native-parent-child', async () => {
+   expect(data).toEqual({atomicId:ids.atomic,parentId:ids.container});
+  });
 });
 
 test('[B:native-flex-container] native published flex layout is computed',async({page})=>{
@@ -58,7 +65,9 @@ test('[B:native-flex-container] native published flex layout is computed',async(
    const container=node.closest('.e-con');
    return container ? getComputedStyle(container).display : null;
  });
- expect(display).toBe('flex');
+ await productAssertion('B:native-flex-container', async () => {
+   expect(display).toBe('flex');
+  });
 });
 
 test('[C:measured-geometry] published heading occupies nonzero bounds',async({page})=>{
@@ -66,13 +75,17 @@ test('[C:measured-geometry] published heading occupies nonzero bounds',async({pa
  const rect=await page.locator('h2.e-heading-base').first().boundingBox();
  expect(rect).not.toBeNull();
  expect(rect.width).toBeGreaterThan(5);
- expect(rect.height).toBeGreaterThan(5);
+ await productAssertion('C:measured-geometry', async () => {
+   expect(rect.height).toBeGreaterThan(5);
+  });
 });
 
 test('[D:atomic-semantic-heading] atomic widget uses semantic H2',async({page})=>{
  await page.goto(frontend);
  await expect(page.getByRole('heading',{name:title,level:2})).toBeVisible();
- await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
+ await productAssertion('D:atomic-semantic-heading', async () => {
+   await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
+  });
 });
 
 test('[I:native-link-activation] native Elementor link activates anchor',async({page})=>{
@@ -80,7 +93,9 @@ test('[I:native-link-activation] native Elementor link activates anchor',async({
  const link=page.locator('.elementor-button-link[href="#ev4-anchor"]').first();
  await expect(link).toBeVisible();
  await link.click();
- await expect(page).toHaveURL(/#ev4-anchor$/);
+ await productAssertion('I:native-link-activation', async () => {
+   await expect(page).toHaveURL(/#ev4-anchor$/);
+  });
 });
 
 test('[K:ten-viewport-geometry] real DOM responsive measurements',async({page})=>{
@@ -95,10 +110,12 @@ test('[K:ten-viewport-geometry] real DOM responsive measurements',async({page})=
         viewport:window.innerWidth,documentWidth:document.documentElement.scrollWidth};
    });
    records.push({width,...measurement});
+   await productAssertion('K:ten-viewport-geometry', async () => {
    expect(measurement.height).toBeGreaterThan(0);
    expect(measurement.x).toBeGreaterThanOrEqual(-1);
    expect(measurement.right).toBeLessThanOrEqual(width+1);
    expect(measurement.documentWidth).toBeLessThanOrEqual(width+1);
+  });
  }
  fs.mkdirSync('./artifacts',{recursive:true});
  fs.writeFileSync('./artifacts/responsive-geometry.json',JSON.stringify(records,null,2));
@@ -109,13 +126,17 @@ test('[L:semantic-heading-name] accessible name and heading element',async({page
  const heading=page.getByRole('heading',{name:title,level:2});
  await expect(heading).toBeVisible();
  const info=await heading.evaluate(n=>({tag:n.tagName,name:n.textContent.trim()}));
- expect(info).toEqual({tag:'H2',name:title});
+ await productAssertion('L:semantic-heading-name', async () => {
+   expect(info).toEqual({tag:'H2',name:title});
+  });
 });
 
 test('[N:atomic-and-legacy-coexist] two generations render on one page',async({page})=>{
  await page.goto(frontend);
  await expect(page.locator('h2.e-heading-base').first()).toHaveText(title);
- await expect(page.locator('.elementor-widget-heading .elementor-heading-title').first()).toBeVisible();
+ await productAssertion('N:atomic-and-legacy-coexist', async () => {
+   await expect(page.locator('.elementor-widget-heading .elementor-heading-title').first()).toBeVisible();
+  });
 });
 
 
@@ -144,7 +165,9 @@ test('[A:native-duplicate-delete] native Atomic duplicate and delete in real edi
    window.$e.run('document/elements/delete',{container});
  },duplicated);
  await expect(headings).toHaveCount(1);
- await expect(headings).toContainText([title]);
+ await productAssertion('A:native-duplicate-delete', async () => {
+   await expect(headings).toContainText([title]);
+  });
 });
 
 test('[I:keyboard-native-link] native Elementor button works through keyboard',async({page})=>{
@@ -154,7 +177,9 @@ test('[I:keyboard-native-link] native Elementor button works through keyboard',a
  await link.focus();
  await expect(link).toBeFocused();
  await page.keyboard.press('Enter');
- await expect(page).toHaveURL(/#ev4-anchor$/);
+ await productAssertion('I:keyboard-native-link', async () => {
+   await expect(page).toHaveURL(/#ev4-anchor$/);
+  });
 });
 
 
@@ -170,7 +195,9 @@ test('[L:keyboard-tab-reachability] the native Elementor link is reachable with 
      break;
    }
  }
- expect(reached,'Tab must reach the link without scripting focus').toBe(true);
+ await productAssertion('L:keyboard-tab-reachability', async () => {
+   expect(reached,'Tab must reach the link without scripting focus').toBe(true);
+  });
 });
 
 test('[L:contrast-aa-default-button] default Elementor button meets WCAG AA text contrast',async({page})=>{
@@ -202,7 +229,9 @@ test('[L:contrast-aa-default-button] default Elementor button meets WCAG AA text
  const contrast=(Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05);
  fs.mkdirSync('./artifacts',{recursive:true});
  fs.writeFileSync('./artifacts/accessibility-contrast.json',JSON.stringify({...colors,contrast},null,2));
- expect(contrast,'Measured WCAG AA normal-text contrast').toBeGreaterThanOrEqual(4.5);
+ await productAssertion('L:contrast-aa-default-button', async () => {
+   expect(contrast,'Measured WCAG AA normal-text contrast').toBeGreaterThanOrEqual(4.5);
+  });
 });
 
 
@@ -234,5 +263,7 @@ test('[E:native-global-class-persistence] attach a real V4 global class and veri
  await save.click();
  await expect(save).toBeDisabled({timeout:30000});
  await page.goto(frontend);
- await expect(page.locator('h2.e-heading-base').first()).toHaveClass(/ev4-lab-shared/);
+ await productAssertion('E:native-global-class-persistence', async () => {
+   await expect(page.locator('h2.e-heading-base').first()).toHaveClass(/ev4-lab-shared/);
+  });
 });

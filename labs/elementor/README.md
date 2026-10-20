@@ -18,7 +18,7 @@ From labs/elementor execute:
     npx playwright install chromium
     python3 -m unittest discover -s bin -p 'test_*.py' -v
     python3 bin/lab.py catalog
-    python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability all
+    EXPECTED_SOURCE_SHA="$(git rev-parse HEAD)" python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability all
 
 Replace all with a single domain letter A through O for targeted validation. M is a necessary precondition for frontend scenarios and is also exercised in a targeted frontend run.
 
@@ -68,3 +68,13 @@ The official Elementor development test setup uses source builds and hidden expe
 ## Recorded baseline accessibility finding (2026-10-20)
 
 The released Core + Hello Elementor fixture renders the native legacy button with foreground rgb(255,255,255) and background rgb(97,206,112), approximately 1.99:1 contrast. This is a deliberately retained **VERIFIED_FAIL** against WCAG AA 4.5:1 normal-text contrast in this exact profile, not a harness failure or a domain-wide Elementor conclusion. Keyboard Tab reachability is a separate positive scenario so its PASS is not hidden by the contrast failure. Source execution: https://github.com/rezahh107/EV4-Qualification-Service/actions/runs/39410361085. Do not change the contrast threshold or fixture design merely to turn this observation green.
+
+## Evidence-integrity controls (PR #7 repair)
+
+1. **Exact Head execution.** Pull-request checkout uses `github.event.pull_request.head.sha` directly, and manual dispatch uses `github.sha`. A preliminary verification command plus the runner's own gate compare `git rev-parse --verify HEAD^{commit}` to the expected immutable SHA before qualification. Evidence includes the prior `source_commit` and `checkout_commit` fields, plus `expected_source_commit`, `actual_checkout_commit`, and `provenance_verified`. Absent or mismatched source identity results in `NOT_PROVEN`. A matching tree with a different commit is rejected.
+
+2. **Finalized fixture evidence.** The canonical M fixture must pass its Playwright scenario **and** exact WordPress `_elementor_data` and published post-status probes before dependent A/B/C/D/E/I/K/L/N claims remain qualified. An executed mismatched persistence probe marks M `VERIFIED_FAIL`; a transport or execution failure marks M `NOT_PROVEN`. All dependent conclusions are reconciled afterward, retaining original browser observations as lower-strength evidence, not independent persistence proof. Independently verified O remains separate.
+
+3. **Structured assertion origin.** Browser qualification assertions use `productAssertion(id, callback)` wrapping Playwright `test.step('EV4_PRODUCT_ASSERTION:' + id)`. Only a failed step with this exact ID and category establishes `VERIFIED_FAIL`. A failed setup assertion—even if its text contains `expect()`—is `NOT_PROVEN`. A passing test requires its qualifying step to run. The runner rejects catalog-backed test cases missing this wrapper; regression tests exercise harness spoofing and qualified product failure. The native button's computed contrast still uses **4.5:1** and its measured failure is retained.
+
+These repairs **do not broaden A–O coverage**, accept missing Pro credentials, merge the independent CE validator workflow, or make an unsuccessful product assertion into PASS. A fully executed laboratory run can legitimately have a failing workflow and trustworthy individual scenario PASS/FAIL evidence. The standalone default-branch `workflow_dispatch` invocation is separate from a PR CI run and remains not proven until executed there.

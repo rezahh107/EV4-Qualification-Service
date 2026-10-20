@@ -17,6 +17,8 @@ ART = ROOT / 'artifacts'
 CAT = ROOT / 'catalog.json'
 DOMAINS = 'ABCDEFGHIJKLMNO'
 FIXTURE_DEPENDENTS = frozenset('ABCDEIKLN')
+COMMIT_SHA = re.compile(r'[0-9a-f]{40}\Z')
+QUALIFIED_STEP_PREFIX = 'EV4_PRODUCT_ASSERTION:'
 
 
 def digest(obj):
@@ -26,6 +28,26 @@ def digest(obj):
         data = json.dumps(obj, sort_keys=True, separators=(',', ':')).encode()
     return hashlib.sha256(data).hexdigest()
 
+
+
+def actual_git_checkout(root=ROOT):
+    """Read the checked-out Git commit, never a GitHub context or tree digest."""
+    completed = subprocess.run(
+        ['git', 'rev-parse', '--verify', 'HEAD^{commit}'],
+        cwd=root, text=True, capture_output=True, check=False,
+    )
+    if completed.returncode or not COMMIT_SHA.fullmatch(completed.stdout.strip()):
+        raise RuntimeError('Actual Git checkout identity unavailable')
+    return completed.stdout.strip()
+
+
+def require_exact_checkout(expected, observed):
+    if not isinstance(expected, str) or not COMMIT_SHA.fullmatch(expected):
+        raise RuntimeError('Expected immutable source Head is absent or invalid')
+    if observed != expected:
+        raise RuntimeError('Git checkout does not match expected exact Head: '
+                           + str(observed) + ' != ' + expected)
+    return observed
 
 def profile(path):
     path = path.resolve()
@@ -145,63 +167,156 @@ def template(p, selected):
                               'status': 'PRO_OR_LICENSE_UNAVAILABLE' if s.get('requires_pro') else 'NOT_EXECUTED',
                               'observed': None})
     return {'schema_version': 1, 'requested': p, 'profile_sha256': digest(p), 'test_sha256': test_hash(),
-            'source_commit': os.getenv('SOURCE_SHA') or os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'),
-            'checkout_commit': os.getenv('GITHUB_SHA', 'LOCAL_UNBOUND'),
+            'source_commit': os.getenv('EXPECTED_SOURCE_SHA') or os.getenv('SOURCE_SHA') or 'UNBOUND',
+            'checkout_commit': None, 'actual_checkout_commit': None,
+            'expected_source_commit': os.getenv('EXPECTED_SOURCE_SHA'),
+            'provenance_verified': False,
             'github_run': os.getenv('GITHUB_RUN_ID'),
             'github_attempt': os.getenv('GITHUB_RUN_ATTEMPT'), 'scope': p['scope'],
             'installed': None, 'environment_fingerprint': None, 'execution': 'NOT_EXECUTED',
             'setup_error': None, 'teardown': 'NOT_EXECUTED', 'scenarios': scenarios}
 
 
+
+def validate_qualification_coverage():
+    """Require an explicit qualification wrapper for every executable catalog case."""
+    expected = {scenario['test'] for domain in catalog()['domains']
+                for scenario in domain['scenarios'] if scenario['test']}
+    defined = {}
+    for path in sorted((ROOT / 'tests').glob('*.spec.mjs')):
+        source = path.read_text(encoding='utf-8')
+        patterns = list(re.finditer(r"test\('\[([A-O]:[a-z0-9-]+)\]", source))
+        for index, match in enumerate(patterns):
+            key = match.group(1)
+            if key in defined:
+                raise ValueError('Duplicate catalog test implementation: ' + key)
+            last = patterns[index + 1].start() if index + 1 < len(patterns) else len(source)
+            body = source[match.end():last]
+            marker = "await productAssertion('" + key + "'"
+            if marker not in body:
+                raise ValueError('Missing qualified assertion for ' + key)
+            defined[key] = path.name
+    if set(defined) != expected:
+        raise ValueError('Missing/unregistered catalog qualification cases: '
+                         + repr(sorted(set(defined) ^ expected)))
+    return defined
+
+
+def qualified_steps(steps, identity):
+    matches = []
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        if (step.get('title') == QUALIFIED_STEP_PREFIX + identity
+                and step.get('category') == 'test.step'):
+            matches.append(step)
+        matches.extend(qualified_steps(step.get('steps', []), identity))
+    return matches
+
+
 def classify_playwright(report, result):
-    cases = {}
+    """Only structured failed qualification steps can prove a product failure."""
+    observed = {}
     def visit(suite):
         for spec in suite.get('specs', []):
             match = re.match(r'^\[([A-O]):([a-z0-9-]+)\]', spec.get('title', ''))
             if not match:
                 continue
-            for t in spec.get('tests', []):
-                attempts = t.get('results', [])
-                state = attempts[-1].get('status') if attempts else 'skipped'
-                errors = [str(e.get('message', '')) for a in attempts for e in a.get('errors', [])]
-                error = '\n'.join(errors)
-                if state == 'passed':
-                    status = 'VERIFIED_PASS'
-                elif state in ('failed', 'timedOut') and ('expect(' in error or 'AssertionError' in error):
-                    status = 'VERIFIED_FAIL'
-                elif state in ('failed', 'timedOut', 'interrupted'):
-                    status = 'NOT_PROVEN'
-                else:
-                    status = 'NOT_EXECUTED'
-                cases[match.group(1) + ':' + match.group(2)] = (status, state, error[:800])
-        for sub in suite.get('suites', []):
-            visit(sub)
+            identity = match.group(1) + ':' + match.group(2)
+            if identity in observed:
+                raise ValueError('Duplicate Playwright scenario result: ' + identity)
+            test_records = spec.get('tests', [])
+            if len(test_records) != 1:
+                raise ValueError('Ambiguous Playwright result cardinality: ' + identity)
+            attempts = test_records[0].get('results', [])
+            final = attempts[-1] if attempts else {}
+            browser_status = final.get('status', 'skipped')
+            marker_steps = qualified_steps(final.get('steps', []), identity)
+            marker_failure = any('error' in step and step['error'] for step in marker_steps)
+            marker_clear = bool(marker_steps) and all(not step.get('error') for step in marker_steps)
+            if browser_status == 'passed' and marker_clear:
+                status = 'VERIFIED_PASS'
+            elif browser_status in ('failed', 'timedOut') and marker_failure:
+                status = 'VERIFIED_FAIL'
+            elif browser_status == 'skipped':
+                status = 'NOT_EXECUTED'
+            else:
+                status = 'NOT_PROVEN'
+            observed[identity] = (
+                status, browser_status,
+                {'assertion_origin': 'EXPLICIT_PLAYWRIGHT_STEP' if marker_steps else 'UNCLASSIFIED',
+                 'qualified_step_count': len(marker_steps),
+                 'qualified_step_failed': marker_failure,
+                 'browser_state': browser_status,
+                 'errors': [str(e.get('message', ''))[:900] for e in final.get('errors', [])
+                            if isinstance(e, dict)][:2]})
+        for child in suite.get('suites', []):
+            visit(child)
     for suite in report.get('suites', []):
         visit(suite)
-    for scenario in result['scenarios']:
-        if scenario['test_identity'] in cases:
-            status, state, error = cases[scenario['test_identity']]
-            scenario.update(status=status, observed={'state': state, 'error': error or None})
-    return len(cases)
-
-
-def bind_fixture_precondition(result):
-    fixture = next((item for item in result['scenarios']
-                    if item['test_identity'] == 'M:native-editor-create-reopen'), None)
-    if fixture is None or fixture['status'] == 'VERIFIED_PASS':
-        return
     for item in result['scenarios']:
-        if item['capability'] in FIXTURE_DEPENDENTS and item['status'] in ('VERIFIED_FAIL', 'VERIFIED_PASS'):
-            item['observed'] = {
-                'precondition': 'Native Elementor fixture authoring was not verified',
-                'reported_browser_observation': item['observed'],
+        if item['test_identity'] in observed:
+            state, _browser_status, evidence = observed[item['test_identity']]
+            item.update(status=state, observed=evidence)
+    return len(observed)
+
+
+def probe_wordpress_persistence(post_id, fetch=wp):
+    """CLI errors are unavailability, not an observed data mismatch."""
+    try:
+        meta = fetch('post', 'meta', 'get', post_id, '_elementor_data')
+        published = fetch('post', 'get', post_id, '--field=post_status')
+    except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
+        return {'state': 'UNAVAILABLE', 'error': str(exc)[:800]}
+    atomic_data = 'e-heading' in meta and 'EV4 Atomic Heading' in meta
+    published_status = published.strip() == 'publish'
+    return {'state': 'VERIFIED' if atomic_data and published_status else 'MISMATCH',
+            'atomic_data': atomic_data, 'published': published_status}
+
+
+def finalize_fixture_evidence(result, storage):
+    """Authoritative final prerequisite state, then reconcile all dependents."""
+    fixture = next((s for s in result['scenarios']
+                    if s['test_identity'] == 'M:native-editor-create-reopen'), None)
+    if fixture is None:
+        return
+    browser_state = fixture['status']
+    if browser_state == 'VERIFIED_PASS':
+        state = storage.get('state', 'UNAVAILABLE')
+        if state == 'VERIFIED':
+            result['elementor_storage'] = 'Verified native _elementor_data and publication'
+            if result['installed'] is not None:
+                result['installed']['atomic_editor_observed'] = True
+        else:
+            fixture['status'] = 'VERIFIED_FAIL' if state == 'MISMATCH' else 'NOT_PROVEN'
+            fixture['observed'] = {
+                'browser_observation': fixture['observed'],
+                'browser_status': browser_state,
+                'storage_probe': storage,
             }
-            item['status'] = 'NOT_PROVEN'
+    if fixture['status'] != 'VERIFIED_PASS':
+        result.pop('elementor_storage', None)
+        if result['installed'] is not None:
+            result['installed'].pop('atomic_editor_observed', None)
+        for item in result['scenarios']:
+            if item['capability'] not in FIXTURE_DEPENDENTS:
+                continue
+            if item['status'] in ('VERIFIED_PASS', 'VERIFIED_FAIL'):
+                item['observed'] = {
+                    'precondition': 'Finalized native Elementor fixture is not VERIFIED_PASS',
+                    'fixture_status': fixture['status'],
+                    'browser_status': item['status'],
+                    'browser_observation': item['observed'],
+                }
+                item['status'] = 'NOT_PROVEN'
+                item.pop('expected', None)
 
 
 def finish(result):
     statuses = [s['status'] for s in result['scenarios']]
-    if result['installed'] is None:
+    if not result['provenance_verified']:
+        result['execution'] = 'NOT_PROVEN'
+    elif result['installed'] is None:
         result['execution'] = 'ENVIRONMENT_UNAVAILABLE'
     elif 'ENVIRONMENT_UNAVAILABLE' in statuses:
         result['execution'] = 'ENVIRONMENT_UNAVAILABLE'
@@ -235,6 +350,21 @@ def execute(p, selected):
     if ART.exists():
         shutil.rmtree(ART)
     ART.mkdir(parents=True, exist_ok=True)
+    try:
+        observed_head = actual_git_checkout()
+        r['checkout_commit'] = observed_head
+        r['actual_checkout_commit'] = observed_head
+        require_exact_checkout(os.getenv('EXPECTED_SOURCE_SHA'), observed_head)
+        r['provenance_verified'] = True
+    except (RuntimeError, OSError) as exc:
+        r['setup_error'] = str(exc)
+        r['provenance_error'] = str(exc)
+        for item in r['scenarios']:
+            if item['test_identity']:
+                item['status'] = 'NOT_PROVEN'
+        r['teardown'] = 'NOT_STARTED'
+        finish(r)
+        return 2
     (ROOT / '.wp-env.json').write_text(json.dumps(wp_env_profile(p), indent=2) + '\n')
     env = os.environ.copy()
     env.update(WP_ENV_HOME=str((ROOT / '.lab-state' / 'wp-env').resolve()), WP_ENV_PORT='8888',
@@ -245,6 +375,7 @@ def execute(p, selected):
         command([binary('wp-env'), 'start'], env=env, timeout=900)
         started = True
         os.environ.update({k: env[k] for k in ('WP_ENV_HOME', 'WP_ENV_PORT')})
+        validate_qualification_coverage()
         r['installed'] = runtime(p)
         for attempt in range(40):
             try:
@@ -274,13 +405,9 @@ def execute(p, selected):
         report = ART / 'playwright.json'
         if not report.is_file() or not classify_playwright(json.loads(report.read_text()), r):
             r['setup_error'] = 'No recognizable executed Playwright scenario evidence'
-        bind_fixture_precondition(r)
         browser = ART / 'browser.json'
         if browser.is_file():
             r['installed']['browser'] = json.loads(browser.read_text())
-        if any(s['test_identity'] == 'M:native-editor-create-reopen' and
-               s['status'] == 'VERIFIED_PASS' for s in r['scenarios']):
-            r['installed']['atomic_editor_observed'] = True
         geometry = ART / 'responsive-geometry.json'
         if geometry.is_file():
             for item in r['scenarios']:
@@ -301,15 +428,13 @@ def execute(p, selected):
             'test_sha256': r['test_sha256'],
             'catalog_sha256': digest(CAT.read_bytes())
         })
-        if any(s['scenario'] == 'native-editor-create-reopen' and s['status'] == 'VERIFIED_PASS' for s in r['scenarios']):
-            meta = wp('post', 'meta', 'get', ids[0], '_elementor_data')
-            published = wp('post', 'get', ids[0], '--field=post_status')
-            if not ('e-heading' in meta and 'EV4 Atomic Heading' in meta and 'publish' in published):
-                for s in r['scenarios']:
-                    if s['scenario'] == 'native-editor-create-reopen':
-                        s.update(status='VERIFIED_FAIL', observed={'storage_check': 'missing atomic data or publish status'})
-            else:
-                r['elementor_storage'] = 'Verified native _elementor_data and publication'
+        fixture = next((s for s in r['scenarios']
+                        if s['test_identity'] == 'M:native-editor-create-reopen'), None)
+        storage = (probe_wordpress_persistence(ids[0])
+                   if fixture is not None and fixture['status'] == 'VERIFIED_PASS'
+                   else {'state': 'NOT_EXECUTED'})
+        r['fixture_storage_probe'] = storage
+        finalize_fixture_evidence(r, storage)
         if test.returncode and not any(s['status'] in ('VERIFIED_FAIL', 'NOT_PROVEN') for s in r['scenarios']):
             r['setup_error'] = 'Playwright returned failure without recognizable assertion'
     except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as e:
@@ -338,12 +463,22 @@ def main():
     run.add_argument('--profile', default='profiles/core-4.3.5.json')
     run.add_argument('--capability', default='all', choices=['all', *DOMAINS])
     sub.add_parser('catalog')
+    verify = sub.add_parser('verify-checkout')
+    verify.add_argument('--expected', required=True)
     reuse = sub.add_parser('reuse')
     reuse.add_argument('--profile', default='profiles/core-4.3.5.json')
     reuse.add_argument('--evidence', required=True)
     args = cli.parse_args()
     if args.operation == 'catalog':
         print(json.dumps(catalog(), indent=2))
+        return 0
+    if args.operation == 'verify-checkout':
+        try:
+            actual = require_exact_checkout(args.expected, actual_git_checkout())
+        except (RuntimeError, OSError) as exc:
+            print('EXACT_HEAD: NOT_PROVEN: ' + str(exc))
+            return 2
+        print('EXACT_HEAD: VERIFIED ' + actual)
         return 0
     p = profile((ROOT / args.profile).resolve())
     if args.operation == 'run':
