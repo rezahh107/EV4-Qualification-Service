@@ -194,3 +194,26 @@ preserving the existing predicates, and alter the fixture helper's emitted
 element identity. All must fail closed at source qualification. This contract
 is source-integrity control for the accepted Core 4.3.5 scenario
 implementations—not a general proof that every browser observation is correct.
+
+### F-04 / F-05 — approved module acquisition authority and container topology
+
+The approved scenario AST manifest also requires a canonical, unaliased
+`observe` and `settledCount` import from `./observation.mjs`. For this
+bounded Core 4.3.5 lab, `native.spec.mjs` permits only the five reviewed
+module imports, three reviewed constant initializers, and the existing
+catalog-bound top-level test declarations. Unreviewed module wrappers,
+shadowing, aliases, reassignment, computed dynamic top-level code or new
+module declarations fail closed. AST comparison accepts harmless comment and
+formatting edits; new legitimate module bindings require explicit source
+contract review. This is an authoring gate, not a universal JavaScript sandbox
+or a separately non-bypassable validator trust authority.
+
+Native WordPress `_elementor_data` qualification now requires the uniquely
+identified Atomic Heading to be the direct child (by node identity) of exactly
+one generated native Container (`elType=container`) in the inspected tree.
+The existing Elementor 4.3.5 escaped-html title encoding, heading type,
+post publication, transport handling and unsupported-format classification
+remain unchanged. Mismatched document topology yields `MISMATCH`; storage
+transport yields `UNAVAILABLE`; unqualified title encodings yield
+`UNSUPPORTED`. Existing finalized M prerequisite reconciliation preserves
+browser-only observations without elevating unqualified storage.

@@ -335,24 +335,31 @@ def _inspect_atomic_document(raw, fixture_ids):
                for x in (atomic_id, container_id)):
         return {'state': 'UNSUPPORTED', 'reason': 'Generated element identity is unavailable'}
     matching = []
+    containers = []
     def visit(nodes, parent=None):
         for node in nodes:
             if not isinstance(node, dict) or not isinstance(node.get('id'), str):
                 raise ValueError('Malformed Elementor document node')
             if node['id'] == atomic_id:
                 matching.append((node, parent))
+            if node['id'] == container_id:
+                containers.append(node)
             children = node.get('elements', [])
             if not isinstance(children, list):
                 raise ValueError('Malformed Elementor children')
-            visit(children, node.get('id'))
+            visit(children, node)
     try:
         visit(document)
     except (ValueError, RecursionError):
         return {'state': 'MISMATCH', 'reason': 'Malformed nested Elementor element structure'}
     if len(matching) != 1:
         return {'state': 'MISMATCH', 'reason': 'Missing or ambiguous generated Atomic Heading ID'}
+    if len(containers) != 1:
+        return {'state': 'MISMATCH', 'reason': 'Generated container ID missing or duplicated'}
+    container = containers[0]
     node, parent = matching[0]
-    if (parent != container_id or node.get('elType') != 'widget' or
+    if (container.get('elType') != 'container' or parent is not container or
+            node.get('elType') != 'widget' or
             node.get('widgetType') != 'e-heading'):
         return {'state': 'MISMATCH', 'reason': 'Incorrect native heading type or parent'}
     settings = node.get('settings')

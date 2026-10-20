@@ -507,6 +507,104 @@ class LabTests(unittest.TestCase):
                 ):
                     lab.validate_qualification_coverage()
 
+    def test_module_observation_binding_is_canonical_and_closed(self):
+        """Pinned Acorn rejects source-level observation substitution even if
+        every reviewed scenario and predicate callback is unchanged."""
+        from unittest.mock import patch
+        original = (lab.ROOT / 'tests/native.spec.mjs').read_text()
+        canonical = "import { observe, settledCount } from './observation.mjs';"
+        self.assertIn(canonical, original)
+        mutations = {
+            'aliased_observe_wrapper': original.replace(canonical,
+                """import { observe as authenticObserve, settledCount } from './observation.mjs';
+const observe = (identity, acquire) => identity === 'O:installed-runtime-browser'
+  ? authenticObserve(identity, async () => ({
+    httpStatus:200, loginVisible:true, passwordVisible:true
+  })) : authenticObserve(identity, acquire);""", 1),
+            'direct_observe_substitution': original.replace(canonical,
+                """import { settledCount } from './observation.mjs';
+const observe = async (_identity, _acquire) => ({
+ httpStatus:200,loginVisible:true,passwordVisible:true
+});""", 1),
+            'indirect_helper_wrapper': original.replace(canonical,
+                canonical + "\nfunction fakeObservation(identity, collect) { return observe(identity, collect); }", 1),
+            'module_shadowing': original.replace(canonical,
+                canonical + "\nconst observeOverride = (...args) => observe(...args);", 1),
+            'binding_reassignment': original.replace(canonical,
+                canonical + "\nobserve = async () => null;", 1),
+            'unexpected_top_level_io': original.replace(canonical,
+                canonical + "\nfs.writeFileSync('artifacts/forged.json', '{}');", 1),
+            'computed_member_mutation': original.replace(canonical,
+                canonical + "\nconst redirect = globalThis['observe'];", 1),
+            'changed_approved_const': original.replace(
+                "const title = 'EV4 Atomic Heading';",
+                "const title = 'Synthetic Heading';", 1),
+            'extra_import': original.replace(canonical,
+                canonical + "\nimport * as io from './observation.mjs';", 1),
+        }
+        harmless = original.replace("const title = 'EV4 Atomic Heading';",
+                                    "const title = /* formatting */ 'EV4 Atomic Heading' ;", 1)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'tests').mkdir()
+            (root / 'predicate-contract.json').write_text(
+                (lab.ROOT / 'predicate-contract.json').read_text())
+            for name in ('helpers.mjs', 'qualification.mjs', 'observation.mjs'):
+                (root / 'tests' / name).write_text(
+                    (lab.ROOT / 'tests' / name).read_text())
+            path = root / 'tests/native.spec.mjs'
+            with patch.object(lab, 'ROOT', root):
+                path.write_text(original)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                path.write_text(harmless)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                for name, mutation in mutations.items():
+                    with self.subTest(name=name):
+                        path.write_text(mutation)
+                        with self.assertRaisesRegex(
+                            ValueError, 'Structural source qualification failed'
+                        ):
+                            lab.validate_qualification_coverage()
+
+    def test_native_atomic_container_topology_is_unique_and_direct(self):
+        """Exercise production parser; browser and storage states are separate."""
+        ids = {'atomic': '2eb52f4', 'container': '5509617'}
+        expected_title = {'$type': 'escaped-html', 'value': 'EV4 Atomic Heading'}
+        def heading():
+            return {'id': ids['atomic'], 'elType': 'widget',
+                    'widgetType': 'e-heading',
+                    'settings': {'title': expected_title}, 'elements': []}
+        def container(children=None, element_id=None, element_type='container'):
+            return {'id': element_id or ids['container'], 'elType': element_type,
+                    'elements': [heading()] if children is None else children}
+        cases = {
+            'valid_unique_container': ([container()], 'VERIFIED'),
+            'parent_wrong_element_type': ([container(element_type='widget')], 'MISMATCH'),
+            'duplicate_parent_in_other_branch': ([container(), container([])], 'MISMATCH'),
+            'duplicate_parent_in_ancestor_chain': (
+                [container([container([heading()])])], 'MISMATCH'),
+            'wrong_direct_parent': ([container(element_id='aaaaaaa')], 'MISMATCH'),
+            'heading_not_direct_child': (
+                [container([container([heading()], element_id='bbbbbbb')])], 'MISMATCH'),
+            'duplicate_heading_identity': (
+                [container([heading(), heading()])], 'MISMATCH'),
+            'unknown_title_encoding': (
+                [container([{**heading(), 'settings': {'title': {
+                    '$type': 'html', 'value': 'EV4 Atomic Heading'}}}])], 'UNSUPPORTED'),
+            'wrong_heading_type': (
+                [container([{**heading(), 'widgetType': 'heading'}])], 'MISMATCH'),
+        }
+        for name, (document, expected) in cases.items():
+            with self.subTest(name=name):
+                actual = lab._inspect_atomic_document(json.dumps(document), ids)
+                self.assertEqual(actual['state'], expected)
+        self.assertEqual(lab._inspect_atomic_document('{invalid', ids)['state'], 'MISMATCH')
+        self.assertEqual(lab._inspect_atomic_document(json.dumps([container()]),
+                                                       {'atomic':None,'container':'5509617'})['state'],
+                         'UNSUPPORTED')
+        # The post-status and WP-CLI branches are already exercised by the
+        # existing storage transport/publication regression test.
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]

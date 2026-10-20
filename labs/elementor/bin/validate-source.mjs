@@ -157,6 +157,66 @@ walk(fn.body, node=>{
 });
 if (reservedSteps !== 1) reject('Qualification helper requires exactly one native Step');
 
+// Bind the module lexical environment before accepting any reviewed scenario
+// callback. A callback fingerprint alone cannot detect a shadowed observe().
+const canonicalSpecImports = new Map([
+  ['@playwright/test', ['test', 'expect']],
+  ['node:fs', ['default:fs']],
+  ['./helpers.mjs', ['createAtomicFixture']],
+  ['./qualification.mjs', ['productAssertion']],
+  ['./observation.mjs', ['observe', 'settledCount']],
+]);
+const canonicalSpecConstants = new Map([
+  ['postId', 'const postId = process.env.LAB_PAGE_ID;'],
+  ['title', "const title = 'EV4 Atomic Heading';"],
+  ['frontend', "const frontend = '/?page_id=' + postId;"],
+]);
+function validateSpecModuleScope(ast, file) {
+  const imports = new Set();
+  const constants = new Set();
+  for (const node of ast.body) {
+    if (node.type === 'ImportDeclaration') {
+      const source = node.source.value;
+      if (!canonicalSpecImports.has(source) || imports.has(source))
+        reject(file + ': unsupported or duplicate top-level module import: ' + source);
+      const bindings = node.specifiers.map(specifier => {
+        if (specifier.type === 'ImportDefaultSpecifier')
+          return 'default:' + specifier.local.name;
+        if (specifier.type !== 'ImportSpecifier' ||
+            specifier.imported.type !== 'Identifier' ||
+            specifier.local.type !== 'Identifier' ||
+            specifier.imported.name !== specifier.local.name)
+          reject(file + ': noncanonical import binding or alias');
+        return specifier.local.name;
+      });
+      if (JSON.stringify(bindings.slice().sort()) !==
+          JSON.stringify(canonicalSpecImports.get(source).slice().sort()))
+        reject(file + ': noncanonical import bindings: ' + source);
+      imports.add(source);
+    } else if (node.type === 'VariableDeclaration') {
+      if (node.kind !== 'const' || node.declarations.length !== 1 ||
+          node.declarations[0].id.type !== 'Identifier')
+        reject(file + ': unsupported top-level declaration');
+      const name = node.declarations[0].id.name;
+      if (!canonicalSpecConstants.has(name) || constants.has(name))
+        reject(file + ': unreviewed top-level executable binding: ' + name);
+      const expectedNode = parse(canonicalSpecConstants.get(name),
+        {ecmaVersion:2025, sourceType:'module'}).body[0];
+      if (JSON.stringify(canonicalSyntax(node)) !==
+          JSON.stringify(canonicalSyntax(expectedNode)))
+        reject(file + ': canonical module constant changed: ' + name);
+      constants.add(name);
+    } else if (!(node.type === 'ExpressionStatement' &&
+                 node.expression.type === 'CallExpression' &&
+                 identifier(node.expression.callee, 'test'))) {
+      reject(file + ': unreviewed module-scope executable code');
+    }
+  }
+  if (imports.size !== canonicalSpecImports.size ||
+      constants.size !== canonicalSpecConstants.size)
+    reject(file + ': canonical spec module imports/constants incomplete');
+}
+
 // Every browser test is inspected: a raw test.step or an alias to .step is
 // forbidden outside the helper, regardless of its argument construction.
 const declarations = new Map();
@@ -166,6 +226,7 @@ let sawTestFile = false;
 for (const file of files) {
   const ast = parseFile(path.join(testDir, file));
   const isSpec = file.endsWith('.spec.mjs');
+  if (isSpec) validateSpecModuleScope(ast, file);
   if (isSpec) sawTestFile = true;
   let hasNativeTest = false;
   let hasAuthorizedHelper = false;
