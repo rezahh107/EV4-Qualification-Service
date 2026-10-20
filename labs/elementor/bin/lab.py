@@ -207,8 +207,9 @@ def qualified_steps(steps, identity):
     for step in steps:
         if not isinstance(step, dict):
             continue
-        if (step.get('title') == QUALIFIED_STEP_PREFIX + identity
-                and step.get('category') == 'test.step'):
+        # JSON Reporter serializes test.step title/error/children, not category.
+        # The exact reserved step title is produced by productAssertion().
+        if step.get('title') == QUALIFIED_STEP_PREFIX + identity:
             matches.append(step)
         matches.extend(qualified_steps(step.get('steps', []), identity))
     return matches

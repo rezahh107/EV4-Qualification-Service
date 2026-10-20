@@ -47,6 +47,8 @@ class LabTests(unittest.TestCase):
         qualified = {'title': lab.QUALIFIED_STEP_PREFIX + identity,
                      'category': 'test.step',
                      'error': {'message': 'Measured contrast 1.99 < 4.5'}}
+        # Actual Playwright JSONReportTestStep does not serialize category.
+        qualified.pop('category')
         lab.classify_playwright(result_with_step('failed', qualified), with_step)
         self.assertEqual(status_of(with_step), 'VERIFIED_FAIL')
         self.assertEqual(next(x['observed']['assertion_origin'] for x in with_step['scenarios']
