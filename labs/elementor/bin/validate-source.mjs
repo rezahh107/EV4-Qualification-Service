@@ -426,7 +426,7 @@ for (const [id,hash] of Object.entries(predicateFingerprints)) {
 }
 for (const [id,hash] of Object.entries(scenarioSourceFingerprints)) {
   if (contract.scenario_source[id] !== hash)
-    reject('Reviewed scenario acquisition/setup source modified without approval: ' + id);
+    reject('Reviewed scenario acquisition/setup source modified without approval: ' + id + ' actual=' + hash);
 }
 const helperBlobSums = {
  'qualification.mjs': '34d5608d48d38d3eae9662bf3e5b4756ed0397e0',
