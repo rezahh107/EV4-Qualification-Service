@@ -621,7 +621,7 @@ class LabTests(unittest.TestCase):
                         ):
                             lab.validate_qualification_coverage()
                 (root / 'tests/native.spec.mjs').write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
 
     def test_provenance_gates_generic_callback_and_transport_errors(self):
         from unittest.mock import patch
@@ -699,7 +699,7 @@ class LabTests(unittest.TestCase):
                         with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
                             lab.validate_qualification_coverage()
                 (root/'tests/native.spec.mjs').write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()),15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 path=root/'tests/qualification.mjs'
                 source=path.read_text()
                 path.write_text(source.replace('PRODUCT_FAIL','PRODUCT_PASS'))
@@ -745,7 +745,7 @@ class LabTests(unittest.TestCase):
                         ):
                             lab.validate_qualification_coverage()
                 (root / 'tests/native.spec.mjs').write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 helper = root / 'tests/helpers.mjs'
                 helper.write_text(helper.read_text().replace(
                     'return {root,ids};',
@@ -773,7 +773,7 @@ class LabTests(unittest.TestCase):
             root = Path(td)
             clone(root)
             with patch.object(lab, 'ROOT', root):
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 nested = root / 'tests' / 'subfolder'
                 nested.mkdir()
                 (nested / 'forged.spec.mjs').write_text(
@@ -828,12 +828,12 @@ class LabTests(unittest.TestCase):
             configuration = root / 'playwright.config.mjs'
             configuration.write_text(original)
             with patch.object(lab, 'ROOT', root):
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 # Comments/formatting do not affect semantic AST identity.
                 configuration.write_text(original.replace(
                     "testMatch: '**/*.spec.mjs'",
                     "testMatch: /* harmless formatting */ '**/*.spec.mjs'"))
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 mutations = {
                     'testMatch_wider': original.replace(
                         "'**/*.spec.mjs'", "'**/*.{spec,test}.mjs'"),
@@ -855,7 +855,7 @@ class LabTests(unittest.TestCase):
                                 ValueError, 'Structural source qualification failed'):
                             lab.validate_qualification_coverage()
                 configuration.write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 # A symlinked source/directory, even if targeting a real approved
                 # source, must never silently enter the authorized tree.
                 target = root / 'tests' / 'helpers.mjs'
@@ -937,9 +937,9 @@ const observe = async (_identity, _acquire) => ({
             )
             with patch.object(lab, 'ROOT', root):
                 path.write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 path.write_text(harmless)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 for name, mutation in mutations.items():
                     with self.subTest(name=name):
                         path.write_text(mutation)
