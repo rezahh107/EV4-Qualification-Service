@@ -192,13 +192,17 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
  await page.reload();
  await expect(root).toBeVisible({timeout:60000});
  await page.locator('.elementor-panel-loading').waitFor({state:'detached'});
- await settledCount(frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title'),1);
- const reopenedCount=await frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title').count();
- if(reopenedCount)await page.evaluate(id=>{
+ const reopenedHeading=frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title');
+ await expect(reopenedHeading).toBeVisible({timeout:15000});
+ const reopenedCount=await reopenedHeading.count();
+ await page.evaluate(id=>{
   window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
  },legacyId);
  const reopenedInput=page.locator('.elementor-control-title input, .elementor-control-title textarea').first();
- const reopenedValue=await reopenedInput.count()?await reopenedInput.inputValue():null;
+ // Selection re-renders the control asynchronously. A missing/unready control
+ // is a harness prerequisite failure, not a qualified product mismatch.
+ await expect(reopenedInput).toBeVisible({timeout:15000});
+ const reopenedValue=await reopenedInput.inputValue();
  const observation=await observe('D:native-partial-text-colors',async()=>{
   const widths=[320,390,768,1440];
   const responsive=[];
