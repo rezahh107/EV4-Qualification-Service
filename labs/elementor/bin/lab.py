@@ -1162,9 +1162,21 @@ def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
             raise ValueError('Measured contrast evidence unavailable') from exc
     if lab_exit != (2 if result['execution'] != 'VERIFIED_PASS' else 0):
         raise ValueError('Laboratory command exit does not match recorded qualification')
+    # Admission summary is a projection of the already-validated catalog roster,
+    # never an independent authority that can drift when catalog entries change.
+    mandatory_verified = sum(
+        item['status'] == 'VERIFIED_PASS'
+        for identity, item in expected_executed.items()
+        if identity != CI_INFORMATIONAL
+    )
+    not_executed = sum(item['status'] == 'NOT_EXECUTED' for item in scenarios)
+    pro_unavailable = sum(
+        item['status'] == 'PRO_OR_LICENSE_UNAVAILABLE' for item in scenarios
+    )
     return {'ci_acceptance': 'PASS', 'product_execution': result['execution'],
-            'informational_contrast': contrast_status, 'mandatory_verified': 15,
-            'not_executed': 12, 'pro_unavailable': 1}
+            'informational_contrast': contrast_status,
+            'mandatory_verified': mandatory_verified,
+            'not_executed': not_executed, 'pro_unavailable': pro_unavailable}
 
 
 def ci_acceptance_command(p, selected, lab_exit, expected):
