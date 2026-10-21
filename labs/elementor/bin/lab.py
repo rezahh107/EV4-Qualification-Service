@@ -557,7 +557,7 @@ def probe_partial_heading_persistence(post_id, fetch=wp):
     (ART / 'partial-heading-storage.json').write_text(json.dumps({
         'post_id': post_id, 'identity': identity, 'raw_elementor_data': raw,
         'post_status': status,
-    }, ensure_ascii=False, indent=2) + '\\n')
+    }, ensure_ascii=False, indent=2) + '\n')
     proof = _inspect_partial_heading_document(raw, identity)
     proof['published'] = status == 'publish'
     if proof['state'] == 'VERIFIED' and not proof['published']:
