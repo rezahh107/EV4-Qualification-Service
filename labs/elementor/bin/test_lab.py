@@ -1163,6 +1163,99 @@ const observe = async (_identity, _acquire) => ({
         (root/'playwright.json').write_text(json.dumps(report))
         return p,head,result,report
 
+    def test_ci_admission_summary_tracks_validated_roster_and_catalog_successors(self):
+        """Unit-only successors; no synthetic runtime evidence is product proof."""
+        import copy
+        import os
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            p, head, baseline, report = self._build_ci_gate_fixture(root)
+            env = {'EXPECTED_SOURCE_SHA': head, 'GITHUB_RUN_ID': 'ci-gate-test-run',
+                   'GITHUB_RUN_ATTEMPT': '1'}
+            base_catalog = lab.catalog()
+            self.assertEqual(sum(len(d['scenarios']) for d in base_catalog['domains']), 28)
+            self.assertEqual(sum(s['test'] is not None for d in base_catalog['domains']
+                                 for s in d['scenarios']), 16)
+
+            def validate(candidate, *, cat=None):
+                # Source identities are fixed in this *unit fixture*. A real
+                # successor must still pass exact-Head/source AST admission.
+                effective_catalog = cat or lab.CAT
+                with patch.object(lab, 'ART', root), patch.object(lab, 'CAT', effective_catalog), \
+                        patch.object(lab, 'test_hash', return_value=baseline['test_sha256']), \
+                        patch.dict(os.environ, env):
+                    return lab.verify_ci_acceptance(
+                        candidate, report, p, selected='all', lab_exit=2, expected=head
+                    )
+
+            base_summary = validate(baseline)
+            self.assertEqual({k: base_summary[k] for k in
+                              ('mandatory_verified', 'not_executed', 'pro_unavailable')},
+                             {'mandatory_verified': 15, 'not_executed': 11,
+                              'pro_unavailable': 1})
+            self.assertEqual(sum(s['status']=='NOT_EXECUTED' for s in baseline['scenarios']), 11)
+            self.assertEqual(sum(s['status']=='PRO_OR_LICENSE_UNAVAILABLE'
+                                 for s in baseline['scenarios']), 1)
+
+            # The canonical roster, never manually maintained summary values,
+            # must determine the counts after an admitted catalog successor.
+            successor = copy.deepcopy(base_catalog)
+            successor['domains'][-1]['scenarios'].extend([
+                {'id': 'successor-unexecuted', 'test': None},
+                {'id': 'successor-pro-only', 'test': None, 'requires_pro': True}
+            ])
+            successor_path = root / 'successor-catalog.json'
+            successor_path.write_text(json.dumps(successor))
+            extra = [
+                {'capability': 'O', 'scenario': 'successor-unexecuted',
+                 'test_identity': None, 'status': 'NOT_EXECUTED', 'observed': None},
+                {'capability': 'O', 'scenario': 'successor-pro-only',
+                 'test_identity': None, 'status': 'PRO_OR_LICENSE_UNAVAILABLE',
+                 'observed': None}
+            ]
+
+            # A mutated catalog with the *old* evidence fingerprint is not a
+            # legitimate successor and cannot be admitted.
+            with self.assertRaisesRegex(ValueError, 'environment fingerprint'):
+                validate(baseline, cat=successor_path)
+
+            candidate = copy.deepcopy(baseline)
+            installed = dict(candidate['installed'])
+            installed.pop('atomic_editor_observed')
+            with patch.object(lab, 'ART', root), patch.object(lab, 'CAT', successor_path), \
+                    patch.object(lab, 'test_hash', return_value=baseline['test_sha256']), \
+                    patch.dict(os.environ, env):
+                for item in extra:
+                    candidate['scenarios'].append(copy.deepcopy(item))
+                candidate['environment_fingerprint'] = lab.digest({
+                    'requested': p, 'installed': installed,
+                    'test_sha256': candidate['test_sha256'],
+                    'catalog_sha256': lab.digest(lab.CAT.read_bytes())
+                })
+                revised = lab.verify_ci_acceptance(
+                    candidate, report, p, selected='all', lab_exit=2, expected=head)
+                self.assertEqual((revised['mandatory_verified'], revised['not_executed'],
+                                  revised['pro_unavailable']), (15, 12, 2))
+                self.assertEqual(len(candidate['scenarios']), 30)
+
+                mismatched = copy.deepcopy(candidate)
+                mismatched['scenarios'][-1]['scenario'] = 'wrong-identity'
+                with self.assertRaisesRegex(ValueError, 'roster identity'):
+                    lab.verify_ci_acceptance(
+                        mismatched, report, p, selected='all', lab_exit=2, expected=head)
+                invalid = copy.deepcopy(candidate)
+                invalid['scenarios'][-2]['status'] = 'VERIFIED_PASS'
+                with self.assertRaisesRegex(ValueError, 'improperly promoted'):
+                    lab.verify_ci_acceptance(
+                        invalid, report, p, selected='all', lab_exit=2, expected=head)
+                missing = copy.deepcopy(candidate)
+                missing['scenarios'].pop()
+                with self.assertRaisesRegex(ValueError, 'roster differs'):
+                    lab.verify_ci_acceptance(
+                        missing, report, p, selected='all', lab_exit=2, expected=head)
+
     def test_explicit_ci_gate_admits_only_complete_current_run_evidence(self):
         import copy
         import os
