@@ -40,9 +40,19 @@ A source-level fixture generated through the real running Elementor editor comma
 
 The catalog explicitly accounts for all domains A through O; it does **not** claim exhaustive testing. On the exact observed [GitHub Actions run #39411240686](https://github.com/rezahh107/EV4-Qualification-Service/actions/runs/39411240686) for commit `6ab081d`, 14 real browser scenarios are `VERIFIED_PASS`, one real accessibility assertion is `VERIFIED_FAIL`, twelve catalog scenarios remain `NOT_EXECUTED` and one Pro-only scenario is `PRO_OR_LICENSE_UNAVAILABLE`.
 
-Narrow verified cases exist for **A, B, C, D, E, I, K, L, M, N and O**. The E result proves native V4 Global Class attachment and persistence in the published frontend, **not** Variables or style precedence. F (Components), G (Positioning), H (Media) and J (Dynamic Content) have no executed assertions. The original single Atomic Heading with differently colored inline text remains `NOT_EXECUTED`, as do many subfeatures within the tested domains.
+Narrow verified cases exist for **A, B, C, D, E, I, K, L, M, N and O**. The E result proves native V4 Global Class attachment and persistence in the published frontend, **not** Variables or style precedence. F (Components), G (Positioning), H (Media) and J (Dynamic Content) have no executed assertions. The single-Heading partial-text color scenario has been admitted to the executable catalog in PR #9. Its **new variant-specific outcome is pending exact current-Head CI browser evidence**; the cited historical baseline does not cover this scenario. Many other subfeatures within the tested domains remain unexecuted.
 
 No supplied lawful Elementor Pro license/package is available. No sanitized target-like profile has been executed and no `TARGET_PROFILE_VERIFIED` claim is made. The full GitHub job is intentionally failing because the default button fixture did not meet its text-contrast expectation; this observed product/environment finding must not be relabeled as a test-harness outage.
+
+## D:native-partial-text-colors — single Heading qualification
+
+The requested Heading text is `Smart Homes Are Connected. Now They Need Intelligence.`. The explicit accent scope is `Intelligence.`, **including the period**. The new test creates a separate native Elementor Canvas page, examines a selected substring in the real Atomic V4 editor, and separately tries authoring through the legacy Heading widget's real Title control. The test must **not** claim that the Atomic editor natively supports partial text coloring just because a legacy Heading accepts title markup. The method, observed Atomic toolbar controls, editor reopen/readback, published heading DOM, computed CSS and four responsive widths are retained in the bound Playwright observation receipt. The runner also reads raw WordPress `_elementor_data` and published post status via WP-CLI; an independent parser verifies exact legacy widget ID, native parent, sole Heading and exact title representation. The test never edits saved Elementor JSON or manipulates rendered DOM to manufacture proof.
+
+On a completed verified browser + storage result, the existing `artifacts/result.json` carries `partial_heading_capability`, with `atomic_v4: NOT_PROVEN` and `legacy: VERIFIED_PASS` (if that is what the actual test proves), plus `qualified_identity`, `storage_probe`, and `target_site: NOT_PROVEN`. Read that field **only after** confirming the scenario status, exact source/test/profile hashes, GitHub run/attempt, native storage sample, matching observation receipt SHA and CI admission. A failing or incomplete run does not entitle a consumer to use those claimed statuses.
+
+**Minimal LLM_ONLY CE consumption:** look up the matched Lab run, compare its Core/WordPress/Elementor/theme/runtime profile to the target-site profile and requirements, and return one of `ATOMIC_VERIFIED`, `LEGACY_ONLY_VERIFIED`, `OBSERVED_FAILURE`, `NOT_PROVEN`, or `PROFILE_MISMATCH` as a **derived CE decision**, not a new Lab authority registry. When the target site differs or is untested, even a legitimate generic Lab PASS is not permission to claim the Smart Homes blocker closed. Do not modify CE or its release workflow in this batch.
+
+The pre-existing Core profile contrast measurement (~1.9866:1 versus 4.5:1) remains an independent informational CI exception **only for** `L:contrast-aa-default-button`. A partial-heading failure is never informational and may leave the CI workflow red.
 
 ## GitHub Actions / LLM consumer
 
@@ -111,7 +121,7 @@ reserved-Step origin contract, Pro availability and the default-button
 
 ## Full evidence-boundary repair (F-01 / F-02 / F-03)
 
-The authorized step for each of the 15 implemented catalog scenarios now consumes a
+The authorized step for each of the originally 15 implemented catalog scenarios now consumes a
 JSON-safe **completed observation snapshot**, produced outside the step through
 `observe(identity, acquisition)`. Acquisitions and native-editor operations are
 not product proof. Acquisition receipts record `COMPLETE` and a SHA-256 of the
@@ -161,7 +171,7 @@ violation and is not necessarily a test-harness outage.
 
 ### Predicate and receipt-authority identity
 
-The reviewed predicate AST signatures for all 15 executable scenarios are
+The original predicate AST signatures for 15 executable scenarios are
 pinned in `predicate-contract.json` and verified by `validate-source.mjs`.
 Any deleted, weakened or added predicate must be admitted through a reviewed
 manifest successor; whitespace/comment-only edits do not change the signature.
@@ -179,7 +189,7 @@ fixtures are unit evidence, not WordPress product evidence.
 ### Additional source-integrity closure: observation acquisition
 
 The predicate manifest (schema version **2**) also pins the canonical Acorn
-AST body of each of the 15 executable scenario functions in
+AST body of each originally approved executable scenario function in
 `scenario_source`. This closes a separate source-authority gap: a future
 change that replaces actual browser observation with fabricated, prevalidated
 snapshot values must no longer pass merely because the pure-data product
