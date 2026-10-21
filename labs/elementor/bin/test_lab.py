@@ -125,6 +125,121 @@ class LabTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'absent or invalid'):
                 lab.require_exact_checkout(None, second)
 
+    def test_real_git_clean_and_dirty_exact_source_provenance(self):
+        import subprocess
+        import sys
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            lab_root = repo / 'labs' / 'elementor'
+            (lab_root / 'bin').mkdir(parents=True)
+            (lab_root / 'tests').mkdir()
+            (lab_root / '.gitignore').write_text(
+                'artifacts/\nnode_modules/\npackage-lock.json\n.wp-env.json\n.lab-state/\n')
+            files = {
+                'bin/lab.py': (lab.ROOT / 'bin/lab.py').read_bytes(),
+                'bin/validate-source.mjs': b'const validated = true;\n',
+                'tests/native.spec.mjs': b'// original tested source\n',
+                'catalog.json': b'{"schema_version":1}\n',
+            }
+            for name, data in files.items():
+                dest = lab_root / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(data)
+
+            def git(*args):
+                return subprocess.run(['git', *args], cwd=repo, check=True,
+                                      text=True, capture_output=True).stdout.strip()
+            git('init')
+            git('config', 'user.name', 'EV4 Test')
+            git('config', 'user.email', 'ev4-test@example.invalid')
+            git('add', '.')
+            git('commit', '-m', 'initial source')
+            head = git('rev-parse', 'HEAD')
+            self.assertEqual(lab.require_exact_source(head, lab_root), head)
+
+            def run_cli(expected):
+                return subprocess.run(
+                    [sys.executable, str(lab_root / 'bin/lab.py'),
+                     'verify-checkout', '--expected', expected],
+                    cwd=lab_root, capture_output=True, text=True)
+            self.assertEqual(run_cli(head).returncode, 0)
+
+            # Commit identity stays constant even when running bytes change.
+            for name, original in files.items():
+                path = lab_root / name
+                path.write_bytes(original + b'# changed without commit\n')
+                with self.subTest(dirty=name):
+                    self.assertEqual(git('rev-parse', 'HEAD'), head)
+                    with self.assertRaisesRegex(RuntimeError, 'differs from HEAD'):
+                        lab.require_exact_source(head, lab_root)
+                    result = run_cli(head)
+                    self.assertEqual(result.returncode, 2, result.stdout)
+                    self.assertIn('NOT_PROVEN', result.stdout)
+                path.write_bytes(original)
+
+            # Staged edits and misleading Git index cache flags are not trusted.
+            tracked = lab_root / 'catalog.json'
+            tracked.write_text('{"schema_version":2}\n')
+            git('add', 'labs/elementor/catalog.json')
+            with self.assertRaisesRegex(RuntimeError, 'differs from HEAD'):
+                lab.require_exact_source(head, lab_root)
+            git('reset', 'HEAD', '--', 'labs/elementor/catalog.json')
+            tracked.write_bytes(files['catalog.json'])
+            git('update-index', '--assume-unchanged', 'labs/elementor/catalog.json')
+            tracked.write_text('{"schema_version":99}\n')
+            with self.assertRaisesRegex(RuntimeError, 'differs from HEAD'):
+                lab.require_exact_source(head, lab_root)
+            git('update-index', '--no-assume-unchanged', 'labs/elementor/catalog.json')
+            tracked.write_bytes(files['catalog.json'])
+
+            # New nested executable source cannot hide behind an unchanged HEAD.
+            extra = lab_root / 'tests' / 'nested' / 'forged.spec.mjs'
+            extra.parent.mkdir()
+            extra.write_text('import {test} from "@playwright/test";\n'
+                             'test("unauthorized",()=>{});\n')
+            with self.assertRaisesRegex(RuntimeError, 'Unreviewed untracked source'):
+                lab.require_exact_source(head, lab_root)
+            self.assertEqual(run_cli(head).returncode, 2)
+            extra.unlink()
+            extra.parent.rmdir()
+
+            # Legitimately ignored/generated output does not invalidate provenance.
+            for name in ('artifacts/result.json', '.lab-state/state.json',
+                         'node_modules/runtime.js', 'package-lock.json', '.wp-env.json'):
+                output = lab_root / name
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text('{}')
+            self.assertEqual(lab.require_exact_source(head, lab_root), head)
+            self.assertEqual(run_cli(head).returncode, 0)
+
+            # Equal source tree is not enough if the immutable HEAD differs.
+            git('commit', '--allow-empty', '-m', 'new commit with identical tree')
+            second = git('rev-parse', 'HEAD')
+            self.assertNotEqual(second, head)
+            with self.assertRaisesRegex(RuntimeError, 'does not match expected'):
+                lab.require_exact_source(head, lab_root)
+            self.assertEqual(lab.require_exact_source(second, lab_root), second)
+
+    def test_provenance_rejection_precedes_wordpress_provisioning(self):
+        import os
+        from unittest.mock import patch
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        with tempfile.TemporaryDirectory() as td:
+            artifacts = Path(td) / 'artifacts'
+            with patch.object(lab, 'ART', artifacts), \
+                 patch.object(lab, 'require_exact_source',
+                              side_effect=RuntimeError('Tracked working-tree source differs from HEAD')), \
+                 patch.object(lab, 'wp_env_profile') as provisioning, \
+                 patch.dict(os.environ, {'EXPECTED_SOURCE_SHA': lab.actual_git_checkout()}):
+                self.assertEqual(lab.execute(p, 'O'), 2)
+                provisioning.assert_not_called()
+                evidence = json.loads((artifacts / 'result.json').read_text())
+                self.assertFalse(evidence['provenance_verified'])
+                self.assertEqual(evidence['execution'], 'NOT_PROVEN')
+                self.assertEqual(evidence['teardown'], 'NOT_STARTED')
+                self.assertIn('differs from HEAD', evidence['setup_error'])
+
     def test_workflow_binds_expected_and_actual_head(self):
         flow = (lab.ROOT.parent.parent / '.github/workflows/elementor-lab.yml').read_text()
         self.assertIn('ref: ${{ github.event.pull_request.head.sha || github.sha }}', flow)

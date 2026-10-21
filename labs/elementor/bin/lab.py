@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -48,6 +49,71 @@ def require_exact_checkout(expected, observed):
         raise RuntimeError('Git checkout does not match expected exact Head: '
                            + str(observed) + ' != ' + expected)
     return observed
+
+
+def require_clean_source_tree(root=ROOT):
+    """Compare actual checkout bytes with HEAD blobs, independently of Git index."""
+    root = Path(root).resolve()
+
+    def git_bytes(*args):
+        try:
+            proc = subprocess.run(['git', *args], cwd=root, capture_output=True,
+                                  check=False)
+        except OSError as exc:
+            raise RuntimeError('Git source-integrity inspection unavailable') from exc
+        if proc.returncode:
+            raise RuntimeError('Git source-integrity inspection failed: '
+                               + proc.stderr.decode('utf-8', errors='replace')[-400:])
+        return proc.stdout
+
+    repo = Path(os.fsdecode(git_bytes('rev-parse', '--show-toplevel').strip())).resolve()
+    if not root.is_relative_to(repo):
+        raise RuntimeError('Qualification source is outside Git checkout')
+    object_format = git_bytes('rev-parse', '--show-object-format').strip().decode('ascii')
+    if object_format not in ('sha1', 'sha256'):
+        raise RuntimeError('Unsupported Git object format: ' + object_format)
+    entries = git_bytes('ls-tree', '-r', '-z', '--full-tree', 'HEAD').split(b'\0')
+    checked = 0
+    for entry in entries:
+        if not entry:
+            continue
+        try:
+            metadata, raw_name = entry.split(b'\t', 1)
+            mode, object_type, expected_blob = metadata.split(b' ')
+        except ValueError as exc:
+            raise RuntimeError('Unrecognized tracked Git tree entry') from exc
+        name = os.fsdecode(raw_name)
+        source = repo / name
+        if object_type != b'blob' or mode not in (b'100644', b'100755'):
+            raise RuntimeError('Unsupported tracked source representation: ' + repr(name))
+        try:
+            current = source.lstat()
+            if not stat.S_ISREG(current.st_mode):
+                raise RuntimeError('Tracked source is not a regular file: ' + repr(name))
+            payload = source.read_bytes()
+        except OSError as exc:
+            raise RuntimeError('Tracked source cannot be read: ' + repr(name)) from exc
+        actual = hashlib.new(object_format, b'blob ' + str(len(payload)).encode('ascii')
+                             + b'\0' + payload).hexdigest().encode('ascii')
+        if actual != expected_blob:
+            raise RuntimeError('Tracked working-tree source differs from HEAD: ' + repr(name))
+        checked += 1
+    if not checked:
+        raise RuntimeError('No tracked source files qualified against HEAD')
+
+    untracked = git_bytes('ls-files', '--others', '--exclude-standard', '-z', '--')
+    if untracked:
+        offender = os.fsdecode(untracked.split(b'\0', 1)[0])
+        raise RuntimeError('Unreviewed untracked source in working tree: ' + repr(offender))
+
+
+def require_exact_source(expected, root=ROOT):
+    """Single authoritative checkout + actual-byte provenance admission."""
+    observed = actual_git_checkout(root)
+    require_exact_checkout(expected, observed)
+    require_clean_source_tree(root)
+    return observed
+
 
 def profile(path):
     path = path.resolve()
@@ -492,6 +558,8 @@ def execute(p, selected):
         r['checkout_commit'] = observed_head
         r['actual_checkout_commit'] = observed_head
         require_exact_checkout(os.getenv('EXPECTED_SOURCE_SHA'), observed_head)
+        require_exact_source(os.getenv('EXPECTED_SOURCE_SHA'))
+        validate_qualification_coverage()
         r['provenance_verified'] = True
     except (RuntimeError, OSError) as exc:
         r['setup_error'] = str(exc)
@@ -512,8 +580,6 @@ def execute(p, selected):
         command([binary('wp-env'), 'start'], env=env, timeout=900)
         started = True
         os.environ.update({k: env[k] for k in ('WP_ENV_HOME', 'WP_ENV_PORT')})
-        stage = 'source_validation'
-        validate_qualification_coverage()
         stage = 'provisioning'
         r['installed'] = runtime(p)
         for attempt in range(40):
@@ -618,7 +684,7 @@ def main():
         return 0
     if args.operation == 'verify-checkout':
         try:
-            actual = require_exact_checkout(args.expected, actual_git_checkout())
+            actual = require_exact_source(args.expected)
         except (RuntimeError, OSError) as exc:
             print('EXACT_HEAD: NOT_PROVEN: ' + str(exc))
             return 2
