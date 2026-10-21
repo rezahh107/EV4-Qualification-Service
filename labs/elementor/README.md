@@ -292,3 +292,21 @@ modifying `result.json`. Success means only the explicitly mandatory,
 executed qualification and evidence-integrity predicates passed. It does
 **not** certify full A–O, Elementor Pro, or WCAG compliance. The existing
 `always()` evidence upload remains active on any failure.
+
+## PRI-FND-002 — Isolated contrast failure attribution
+
+The full Core 4.3.5 `ci-accept` gate requires a single qualified
+`L:contrast-aa-default-button` failure. Playwright 1.58.2 JSON reporter
+records that failure in `steps[].error`, `results[].error`,
+`results[].errorLocation` and the source-framed `results[].errors[0]`.
+The acceptance gate reconciles these representations **structurally**:
+exactly one attributable attempt error, identical step/attempt structured
+error, equal source location and exact normalized reporter message/code
+frame/stack. It recursively rejects other failed hooks, teardown or
+fixture steps, extra attempt errors and unaccounted suite/spec/record
+failures. Ambiguous or unsupported reporter representations fail closed.
+
+The existing product result and default-button contrast check remain
+unchanged: measured `VERIFIED_FAIL` is informational **only** for the
+separately recorded Core full-lab CI acceptance. A green CI check does
+not establish WCAG compliance, Elementor Pro, or full A–O admission.

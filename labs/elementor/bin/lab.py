@@ -734,6 +734,95 @@ def execute(p, selected):
 CI_INFORMATIONAL = 'L:contrast-aa-default-button'
 
 
+def reconcile_playwright_attempt_errors(spec, record, attempt, qualified_step, failed):
+    """Bind every Playwright 1.58.2 failure surface to the one approved Step.
+
+    The reporter emits the same structured error in step.error and
+    attempt.error, but renders attempt.errors[0].message as that same
+    error plus a source code frame before the stack. Compare those
+    representations, not human-readable substrings or error counts alone.
+    Unknown/ambiguous reporter layouts fail closed.
+    """
+    def incompatible(reason):
+        raise ValueError('Unattributed Playwright failure evidence: ' + reason)
+
+    if spec.get('ok') is not (not failed):
+        incompatible('spec outcome disagrees with qualified result')
+    if any(spec.get(field) not in (None, []) for field in ('error', 'errors')):
+        incompatible('unaccounted spec-level error')
+    if any(record.get(field) not in (None, []) for field in ('error', 'errors')):
+        incompatible('unaccounted test-record error')
+    if record.get('annotations', []) != [] or attempt.get('annotations', []) != []:
+        incompatible('unreviewed failure or skip annotations')
+    if attempt.get('stderr', []) != []:
+        incompatible('independent stderr output cannot be attributed')
+    if not isinstance(attempt.get('steps'), list):
+        incompatible('missing step collection')
+
+    def visit(steps):
+        for step in steps:
+            if not isinstance(step, dict):
+                incompatible('malformed step')
+            error_present = 'error' in step
+            if step is qualified_step:
+                if error_present != failed:
+                    incompatible('authorized product Step failure is inconsistent')
+            elif error_present or any(step.get(field) not in (None, []) for field in
+                                      ('errors', 'errorLocation')):
+                incompatible('additional failed step, hook, fixture or teardown')
+            children = step.get('steps', [])
+            if not isinstance(children, list):
+                incompatible('unsupported nested step representation')
+            visit(children)
+
+    visit(attempt['steps'])
+    if not failed:
+        if attempt.get('errors') != [] or \
+                'error' in attempt or 'errorLocation' in attempt:
+            incompatible('unexpected attempt/fixture failure')
+        return
+
+    if qualified_step is None or 'error' not in qualified_step:
+        incompatible('missing authorized product failure')
+    errors = attempt.get('errors')
+    if not isinstance(errors, list) or len(errors) != 1:
+        incompatible('expected precisely one attributable attempt error')
+    step_error = qualified_step['error']
+    attempt_error = attempt.get('error')
+    if not isinstance(step_error, dict) or attempt_error != step_error or \
+            set(step_error) != {'message', 'stack', 'snippet', 'location'}:
+        incompatible('structured attempt error differs from product Step error')
+    if not all(isinstance(step_error[k], str) and step_error[k] for k in
+               ('message', 'stack', 'snippet')):
+        incompatible('incomplete structured product error')
+    location = step_error['location']
+    if not isinstance(location, dict) or set(location) != {'file', 'line', 'column'} or \
+            not isinstance(location['file'], str) or not location['file'].endswith(
+                '/tests/native.spec.mjs') or \
+            not all(type(location[key]) is int and location[key] >= 1
+                    for key in ('line', 'column')):
+        incompatible('product assertion location is unsupported')
+    if attempt.get('errorLocation') != location or \
+            not isinstance(errors[0], dict) or \
+            set(errors[0]) != {'location', 'message'} or \
+            errors[0]['location'] != location:
+        incompatible('attempt error locations/cardinality differ from product Step')
+
+    def without_ansi(text):
+        return re.sub(r'\x1b\[[0-9;]*m', '', text)
+
+    message = without_ansi(step_error['message'])
+    stack = without_ansi(step_error['stack'])
+    snippet = without_ansi(step_error['snippet']).rstrip('\n')
+    rendered = errors[0]['message']
+    if not stack.startswith(message) or \
+            not isinstance(rendered, str) or \
+            without_ansi(rendered).rstrip('\n') != (
+                message + '\n\n' + snippet + stack[len(message):]
+            ):
+        incompatible('reporter error text/frame/stack is not the authorized failure')
+
+
 def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
     """Reject any incomplete/unclassified current-run evidence before CI admission."""
     if selected != 'all' or p.get('id') != 'core-4.3.5-wp-7.1.3' or \
@@ -853,6 +942,8 @@ def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
     def inspect_suite(suite):
         if not isinstance(suite, dict):
             raise ValueError('Malformed Playwright suite')
+        if any(suite.get(field) not in (None, []) for field in ('error', 'errors')):
+            raise ValueError('Unclassified suite-level/fixture failure')
         for spec in suite.get('specs', []):
             if not isinstance(spec, dict):
                 raise ValueError('Malformed Playwright spec')
@@ -879,10 +970,9 @@ def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
             actual = expected_executed[identity]['status']
             failed = actual == 'VERIFIED_FAIL'
             if (final.get('status') != ('failed' if failed else 'passed') or
-                    record.get('status') != ('unexpected' if failed else 'expected') or
-                    bool(steps[0].get('error')) != failed or
-                    bool(final.get('errors')) != failed):
+                    record.get('status') != ('unexpected' if failed else 'expected')):
                 raise ValueError('Browser result and product evidence disagree: ' + identity)
+            reconcile_playwright_attempt_errors(spec, record, final, steps[0], failed)
             receipt = read_qualification_receipts(identity)
             if receipt.get('observation_state') != 'COMPLETE' or \
                     receipt.get('assertion_state') != ('PRODUCT_FAIL' if failed else 'PRODUCT_PASS') or \

@@ -1069,14 +1069,30 @@ const observe = async (_identity, _acquire) => ({
                 item['expected'] = {'minimum_normal_text_contrast_ratio':4.5}
                 item['observed']['measured_css'] = {'contrast': ratio}
             step = {'title': lab.QUALIFIED_STEP_PREFIX + identity}
+            attempt_errors = []
+            attempt_detail = {}
             if failure:
-                step['error'] = {'message':'Actual product predicate mismatch'}
+                # Actual Playwright 1.58.2 JSON reporter shape: step.error
+                # and attempt.error match; errors[0] includes a code frame
+                # interpolated between the same error message and stack.
+                location = {'file':'/lab/tests/native.spec.mjs',
+                            'line':313, 'column':69}
+                message = 'Error: measured AA contrast 1.9866 below 4.5'
+                snippet = '> 313 | expect(contrast).toBeGreaterThanOrEqual(4.5);'
+                stack = message + '\n    at assertProduct (/lab/tests/native.spec.mjs:313:69)'
+                structured = {'message':message, 'stack':stack,
+                              'location':location, 'snippet':snippet}
+                step['error'] = structured
+                attempt_errors = [{'location':location, 'message':
+                                   message + '\n\n' + snippet + stack[len(message):]}]
+                attempt_detail = {'error':structured, 'errorLocation':location}
             attempt = {
                 'status':'failed' if failure else 'passed',
-                'errors':[{'message':'Product mismatch'}] if failure else [],
-                'retry':0, 'steps':[step]
+                'errors':attempt_errors, 'annotations':[], 'stderr':[],
+                'retry':0, 'steps':[step], **attempt_detail
             }
-            specs.append({'title':'['+identity+'] native scenario', 'file':'native.spec.mjs',
+            specs.append({'title':'['+identity+'] native scenario',
+                          'file':'native.spec.mjs', 'ok': not failure,
                           'tests':[{'expectedStatus':'passed',
                                     'status':'unexpected' if failure else 'expected',
                                     'results':[attempt]}]})
@@ -1179,6 +1195,104 @@ const observe = async (_identity, _acquire) => ({
                 (root/'native-storage-sample.json').write_text('{"malformed":true}')
                 rejected()
                 self.assertEqual(positive['execution'],'VERIFIED_FAIL')
+
+    def test_error_attribution_excludes_all_independent_reporter_failures(self):
+        """Playwright 1.58.2 structured attempt/step error attribution.
+
+        These mutations were admitted by the previous bool(errors) check;
+        no product/source/receipt metadata is otherwise modified.
+        """
+        import copy
+        import os
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            p,head,product,report = self._build_ci_gate_fixture(root)
+            environment = {
+                'EXPECTED_SOURCE_SHA':head, 'GITHUB_RUN_ID':'ci-gate-test-run',
+                'GITHUB_RUN_ATTEMPT':'1',
+            }
+            def contrast_case(payload):
+                return next(spec for spec in payload['suites'][0]['specs']
+                            if spec['title'].startswith('[L:contrast-aa-default-button]'))
+            def independent_error():
+                return {'message':'Error: unrelated failure from teardown',
+                        'location':{'file':'/lab/tests/native.spec.mjs',
+                                    'line':400, 'column':1}}
+            with patch.object(lab,'ART',root), patch.dict(os.environ,environment):
+                self.assertEqual(lab.verify_ci_acceptance(
+                    product,report,p,selected='all',lab_exit=2,expected=head
+                )['ci_acceptance'],'PASS')
+                def rejected(name, mutation):
+                    changed=copy.deepcopy(report)
+                    spec=contrast_case(changed)
+                    attempt=spec['tests'][0]['results'][0]
+                    step=attempt['steps'][0]
+                    mutation(changed,spec,attempt,step)
+                    with self.subTest(name=name):
+                        with self.assertRaisesRegex(ValueError,
+                                'failure|Playwright|Browser|mismatch|unclassified'):
+                            lab.verify_ci_acceptance(
+                                copy.deepcopy(product), changed, p, selected='all',
+                                lab_exit=2,expected=head)
+                cases = {
+                    'second_independent_attempt_error':
+                        lambda r,s,a,st:a['errors'].append(independent_error()),
+                    'independent_top_level_attempt_error':
+                        lambda r,s,a,st:a.update(error=independent_error()),
+                    'additional_failed_after_hook':
+                        lambda r,s,a,st:a['steps'].append({
+                            'title':'After Hooks','error':independent_error()}),
+                    'additional_failed_before_hook':
+                        lambda r,s,a,st:a['steps'].insert(0,{
+                            'title':'Before Hooks','error':independent_error()}),
+                    'nested_teardown_failure':
+                        lambda r,s,a,st:st.update(steps=[{
+                            'title':'Fixture cleanup','error':independent_error()}]),
+                    'missing_authorized_product_error':
+                        lambda r,s,a,st:st.pop('error'),
+                    'altered_authorized_product_error':
+                        lambda r,s,a,st:st['error'].update(location={
+                            'file':'/lab/tests/native.spec.mjs','line':412,'column':1}),
+                    'corrupt_attempt_reported_error':
+                        lambda r,s,a,st:a['errors'][0].update(message='Other error'),
+                    'corrupt_source_frame':
+                        lambda r,s,a,st:a['errors'][0].update(
+                            message=a['errors'][0]['message']+'\nAnother hidden error'),
+                    'missing_attempt_error':
+                        lambda r,s,a,st:a.pop('error'),
+                    'missing_attempt_error_location':
+                        lambda r,s,a,st:a.pop('errorLocation'),
+                    'unrelated_attempt_location':
+                        lambda r,s,a,st:a.update(errorLocation=independent_error()['location']),
+                    'ambiguous_error_array':
+                        lambda r,s,a,st:a.update(errors=[a['errors'][0],a['errors'][0]]),
+                    'unsupported_error_record_shape':
+                        lambda r,s,a,st:a['errors'][0].update(extra='unknown error source'),
+                    'unclassified_spec_error':
+                        lambda r,s,a,st:s.update(errors=[independent_error()]),
+                    'unclassified_suite_error':
+                        lambda r,s,a,st:r['suites'][0].update(errors=[independent_error()]),
+                    'unclassified_record_error':
+                        lambda r,s,a,st:s['tests'][0].update(error=independent_error()),
+                    'unexpected_spec_ok':
+                        lambda r,s,a,st:s.update(ok=True),
+                    'unexpected_reporter_annotation':
+                        lambda r,s,a,st:a.update(annotations=[{'type':'fail'}]),
+                    'unexpected_stderr':
+                        lambda r,s,a,st:a.update(stderr=[{'text':'Unclassified failure'}]),
+                }
+                for name,mutation in cases.items():
+                    rejected(name,mutation)
+                # A clean product PASS with an extraneous hook failure must
+                # also be blocked (not only the informational contrast case).
+                altered=copy.deepcopy(report)
+                clean=altered['suites'][0]['specs'][0]
+                clean['tests'][0]['results'][0]['steps'].append({
+                    'title':'After Hooks','error':independent_error()})
+                with self.assertRaises(ValueError):
+                    lab.verify_ci_acceptance(product,altered,p,
+                        selected='all',lab_exit=2,expected=head)
 
     def test_ci_gate_command_rejects_missing_browser_report_and_untrusted_source(self):
         import os
