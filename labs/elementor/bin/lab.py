@@ -535,7 +535,8 @@ def _inspect_partial_heading_document(raw, identity):
     node, parent = found[0]
     if parent is not parents[0] or parent.get('elType') != 'container' or \
             node.get('elType') != 'widget' or node.get('widgetType') != 'heading' or \
-            node.get('settings', {}).get('title') != PARTIAL_MARKUP:
+            (not isinstance(node.get('settings'), dict) or
+             node['settings'].get('title') != PARTIAL_MARKUP):
         return {'state': 'MISMATCH', 'reason': 'Wrong native legacy title/topology'}
     return {'state': 'VERIFIED', 'variant': 'legacy', 'saved_title': PARTIAL_MARKUP,
             'generated_heading_id': identity['heading'], 'generated_container_id': identity['container']}
