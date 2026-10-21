@@ -192,6 +192,7 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
  await page.reload();
  await expect(root).toBeVisible({timeout:60000});
  await page.locator('.elementor-panel-loading').waitFor({state:'detached'});
+ await settledCount(frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title'),1);
  const reopenedCount=await frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title').count();
  if(reopenedCount)await page.evaluate(id=>{
   window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
@@ -231,7 +232,7 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
     editorReopened:reopenedCount,editorTitle:reopenedValue},
    semanticHeadings:await page.locator('h1,h2,h3,h4,h5,h6').count(),
    accessibleHeadings:await page.getByRole('heading',{name:fullText,level:2}).count(),
-   published:content,responsive,expected:{fullText,ordinary,accented,accentColor:'rgb(180, 35, 78)',
+   published:content||{tag:null,text:null,ordinaryText:null,accentText:null,spanCount:0,directChildCount:0,childElements:0,accentColor:null,ordinaryColor:null},responsive,expected:{fullText,ordinary,accented,accentColor:'rgb(180, 35, 78)',
     authoredMarkup:legacyMarkup}};
  });
  await productAssertion('D:native-partial-text-colors',observation,snapshot=>{
