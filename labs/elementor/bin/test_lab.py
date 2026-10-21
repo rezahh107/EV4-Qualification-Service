@@ -948,6 +948,33 @@ const observe = async (_identity, _acquire) => ({
                         ):
                             lab.validate_qualification_coverage()
 
+    def test_native_partial_heading_topology_and_color_mutations(self):
+        ids = {'post_id':'6', 'container':'ba12345', 'heading':'bc12345',
+               'atomic_attempt':'bb12345', 'chosen_variant':'legacy',
+               'expected_markup':lab.PARTIAL_MARKUP}
+        def node(title=lab.PARTIAL_MARKUP, kind='heading'):
+            return {'id':'bc12345','elType':'widget','widgetType':kind,
+                    'settings':{'title':title},'elements':[]}
+        def doc(children):
+            return json.dumps([{'id':'ba12345','elType':'container',
+                                'elements':children}])
+        self.assertEqual(lab._inspect_partial_heading_document(
+            doc([node()]), ids)['state'],'VERIFIED')
+        for name, candidate in {
+            'wrong_color':doc([node(lab.PARTIAL_MARKUP.replace('#b4234e','#ffffff'))]),
+            'wrong_period':doc([node(lab.PARTIAL_MARKUP.replace('Intelligence.','Intelligence'))]),
+            'wrong_widget':doc([node(kind='e-heading')]),
+            'duplicate_heading':doc([node(),node()]),
+            'wrong_direct_parent':json.dumps([node()]),
+            'missing_heading':doc([]),
+            'malformed':'invalid',
+        }.items():
+            with self.subTest(case=name):
+                self.assertEqual(lab._inspect_partial_heading_document(
+                    candidate,ids)['state'],'MISMATCH')
+        self.assertEqual(lab._inspect_partial_heading_document(
+            doc([node()]),{**ids,'chosen_variant':'atomic'})['state'],'MISMATCH')
+
     def test_native_atomic_container_topology_is_unique_and_direct(self):
         """Exercise production parser; browser and storage states are separate."""
         ids = {'atomic': '2eb52f4', 'container': '5509617'}
@@ -1026,6 +1053,31 @@ const observe = async (_identity, _acquire) => ({
             'fixture_post_id':'5', 'generated_element_ids':ids,
             'raw_elementor_data':native, 'post_status':'publish'
         }))
+        # The new independent page is not the canonical M fixture.
+        result['partial_heading_post_id'] = '6'
+        result['partial_heading_capability'] = {
+            'atomic_v4': 'NOT_PROVEN', 'legacy': 'VERIFIED_PASS',
+            'method': 'native-legacy-heading-title-control',
+            'qualified_identity': lab.PARTIAL_ID,
+            'storage_probe': 'VERIFIED', 'target_site': 'NOT_PROVEN'
+        }
+        partial_ids = {'post_id':'6', 'container':'ba12345',
+                       'atomic_attempt':'bb12345', 'heading':'bc12345',
+                       'chosen_variant':'legacy', 'expected_markup':lab.PARTIAL_MARKUP}
+        partial_data = json.dumps([{'id':'ba12345', 'elType':'container', 'elements':[
+            {'id':'bc12345', 'elType':'widget', 'widgetType':'heading',
+             'settings':{'title':lab.PARTIAL_MARKUP}, 'elements':[]}
+        ]}])
+        (root/'partial-heading-ids.json').write_text(json.dumps(partial_ids))
+        (root/'partial-heading-storage.json').write_text(json.dumps({
+            'post_id':'6', 'identity':partial_ids,
+            'raw_elementor_data':partial_data, 'post_status':'publish'
+        }))
+        result['partial_heading_storage_probe'] = {
+            'state':'VERIFIED', 'published':True, 'variant':'legacy',
+            'saved_title':lab.PARTIAL_MARKUP,
+            'generated_heading_id':'bc12345', 'generated_container_id':'ba12345'
+        }
         result['fixture_storage_probe'] = {
             'state':'VERIFIED', 'published':True, 'atomic_data':True,
             'generated_atomic_id':atomic, 'generated_container_id':container,
@@ -1046,6 +1098,13 @@ const observe = async (_identity, _acquire) => ({
             failure = contrast_fail and identity == lab.CI_INFORMATIONAL
             item['status'] = 'VERIFIED_FAIL' if failure else 'VERIFIED_PASS'
             observation = {'fixture_measurement': n, 'identity':identity}
+            if identity == lab.PARTIAL_ID:
+                observation = {
+                    'atomic':{'qualification':'NOT_PROVEN','selection':lab.PARTIAL_ACCENT},
+                    'legacy':{'authoredVia':'native-title-control',
+                              'editorTitle':lab.PARTIAL_MARKUP},
+                    'published':{'text':lab.PARTIAL_TEXT}
+                }
             sha = hashlib.sha256(json.dumps(
                 observation, separators=(',', ':'), ensure_ascii=False
             ).encode()).hexdigest()
@@ -1097,7 +1156,7 @@ const observe = async (_identity, _acquire) => ({
                                     'status':'unexpected' if failure else 'expected',
                                     'results':[attempt]}]})
         report = {'errors':[], 'suites':[{'specs':specs}],
-                  'stats':{'expected':14 if contrast_fail else 15,
+                  'stats':{'expected':15 if contrast_fail else 16,
                            'unexpected':1 if contrast_fail else 0,
                            'skipped':0, 'flaky':0}}
         (root/'result.json').write_text(json.dumps(result))
@@ -1150,6 +1209,19 @@ const observe = async (_identity, _acquire) => ({
                 rejected(result=altered)
                 altered = copy.deepcopy(positive)
                 altered['fixture_storage_probe']['state']='UNAVAILABLE'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['partial_heading_capability']['legacy']='NOT_PROVEN'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['partial_heading_storage_probe']['state']='UNAVAILABLE'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['scenarios'][next(n for n,x in enumerate(altered['scenarios'])
+                    if x['test_identity']==lab.PARTIAL_ID)]['status']='VERIFIED_FAIL'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['partial_heading_post_id']='wrong'
                 rejected(result=altered)
                 altered = copy.deepcopy(positive)
                 altered['installed']=None
