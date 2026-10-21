@@ -21,6 +21,17 @@ FIXTURE_DEPENDENTS = frozenset('ABCDEIKLN')
 COMMIT_SHA = re.compile(r'[0-9a-f]{40}\Z')
 QUALIFIED_STEP_PREFIX = 'EV4_PRODUCT_ASSERTION:'
 
+_UNCOMPUTED_FINGERPRINT = object()
+
+
+class SourceFingerprintError(RuntimeError):
+    """Source fingerprinting failed before an execution identity could be bound."""
+
+
+class SourceContractError(ValueError):
+    """Reviewed executable source qualification did not complete."""
+
+
 
 def digest(obj):
     if isinstance(obj, bytes):
@@ -225,7 +236,7 @@ def runtime(p):
     return actual
 
 
-def template(p, selected):
+def template(p, selected, *, test_fingerprint=_UNCOMPUTED_FINGERPRINT):
     scenarios = []
     for domain in catalog()['domains']:
         if selected not in ('all', domain['id']) and not (
@@ -237,7 +248,12 @@ def template(p, selected):
                               'test_identity': s['test'],
                               'status': 'PRO_OR_LICENSE_UNAVAILABLE' if s.get('requires_pro') else 'NOT_EXECUTED',
                               'observed': None})
-    return {'schema_version': 1, 'requested': p, 'profile_sha256': digest(p), 'test_sha256': test_hash(),
+    if test_fingerprint is _UNCOMPUTED_FINGERPRINT:
+        try:
+            test_fingerprint = test_hash()
+        except (ValueError, OSError, RuntimeError) as exc:
+            raise SourceFingerprintError('Source fingerprint unavailable: ' + str(exc)) from exc
+    return {'schema_version': 1, 'requested': p, 'profile_sha256': digest(p), 'test_sha256': test_fingerprint,
             'source_commit': os.getenv('EXPECTED_SOURCE_SHA') or os.getenv('SOURCE_SHA') or 'UNBOUND',
             'checkout_commit': None, 'actual_checkout_commit': None,
             'expected_source_commit': os.getenv('EXPECTED_SOURCE_SHA'),
@@ -545,31 +561,77 @@ def finish(result):
         print(item['capability'] + ':' + item['scenario'] + ' = ' + item['status'])
 
 
+def unavailable_pre_admission_template(p, selected):
+    """Preserve only verifiable result metadata when template input is invalid."""
+    try:
+        result = template(p, selected, test_fingerprint=None)
+    except (RuntimeError, ValueError, OSError, KeyError, TypeError):
+        # Unknown catalog cardinality is not authority to invent scenarios.
+        result = {
+            'schema_version': 1, 'requested': p, 'profile_sha256': digest(p),
+            'test_sha256': None, 'source_commit': 'UNBOUND',
+            'checkout_commit': None, 'actual_checkout_commit': None,
+            'expected_source_commit': os.getenv('EXPECTED_SOURCE_SHA'),
+            'provenance_verified': False,
+            'github_run': os.getenv('GITHUB_RUN_ID'),
+            'github_attempt': os.getenv('GITHUB_RUN_ATTEMPT'),
+            'scope': p['scope'], 'installed': None,
+            'environment_fingerprint': None, 'execution': 'NOT_EXECUTED',
+            'setup_error': None, 'teardown': 'NOT_EXECUTED', 'scenarios': [],
+        }
+    # The fingerprint or catalog is not proven; never carry an expected SHA
+    # into the source_commit field as if it were an observed source identity.
+    result['test_sha256'] = None
+    result['source_commit'] = 'UNBOUND'
+    return result
+
+
+def reject_pre_admission(result, error, *, source_contract=False):
+    """Common, truthful failure lifecycle; provisioning has not started."""
+    reason = str(error)[:1500]
+    result['setup_error'] = reason
+    field = 'source_contract_error' if source_contract else 'provenance_error'
+    result[field] = reason
+    result['provenance_verified'] = False
+    result['source_commit'] = 'UNBOUND'
+    for scenario in result['scenarios']:
+        if scenario['test_identity']:
+            scenario['status'] = 'NOT_PROVEN'
+    result['teardown'] = 'NOT_STARTED'
+    finish(result)
+    return 2
+
+
 def execute(p, selected):
-    r = template(p, selected)
-    # A previous run's Playwright JSON must NEVER qualify a new execution.
+    # Clear evidence *before* template(), which can raise during test_hash().
+    # A failed pre-admission attempt cannot leave a previous result readable.
     if ART.is_symlink():
         raise ValueError('Refusing symlinked artifact directory')
     if ART.exists():
         shutil.rmtree(ART)
     ART.mkdir(parents=True, exist_ok=True)
     try:
+        r = template(p, selected)
+    except (RuntimeError, ValueError, OSError, KeyError, TypeError) as exc:
+        r = unavailable_pre_admission_template(p, selected)
+        return reject_pre_admission(
+            r, exc, source_contract=not isinstance(exc, SourceFingerprintError)
+        )
+    try:
         observed_head = actual_git_checkout()
         r['checkout_commit'] = observed_head
         r['actual_checkout_commit'] = observed_head
         require_exact_checkout(os.getenv('EXPECTED_SOURCE_SHA'), observed_head)
         require_exact_source(os.getenv('EXPECTED_SOURCE_SHA'))
-        validate_qualification_coverage()
+        try:
+            validate_qualification_coverage()
+        except (ValueError, OSError) as exc:
+            raise SourceContractError(str(exc)) from exc
         r['provenance_verified'] = True
-    except (RuntimeError, OSError) as exc:
-        r['setup_error'] = str(exc)
-        r['provenance_error'] = str(exc)
-        for item in r['scenarios']:
-            if item['test_identity']:
-                item['status'] = 'NOT_PROVEN'
-        r['teardown'] = 'NOT_STARTED'
-        finish(r)
-        return 2
+    except (RuntimeError, ValueError, OSError) as exc:
+        return reject_pre_admission(
+            r, exc, source_contract=isinstance(exc, SourceContractError)
+        )
     (ROOT / '.wp-env.json').write_text(json.dumps(wp_env_profile(p), indent=2) + '\n')
     env = os.environ.copy()
     env.update(WP_ENV_HOME=str((ROOT / '.lab-state' / 'wp-env').resolve()), WP_ENV_PORT='8888',

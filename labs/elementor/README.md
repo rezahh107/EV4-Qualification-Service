@@ -244,3 +244,23 @@ predicate/source manifests, fixture storage contracts, version scope,
 and the 4.5:1 contrast threshold remain unchanged. This is a local
 admission snapshot, not a separate immutable external trust system
 or protection against a hostile concurrent post-admission mutation.
+
+## EC-FND-002 — Pre-admission evidence finalization
+
+The earlier exact-source guard remains authoritative. An Acorn
+source-contract `ValueError` now uses the existing pre-admission
+`NOT_PROVEN` finalization path, independently of a source-integrity
+failure. These causes retain distinct `source_contract_error` and
+`provenance_error` diagnostics in the existing result evidence.
+
+Stale artifacts are cleared **before** `template()` computes a test
+fingerprint. If fingerprint computation cannot complete, no test
+SHA or source identity is invented: the canonical result is finalized
+with `test_sha256: null`, `source_commit: UNBOUND`,
+`provenance_verified: false`, `execution: NOT_PROVEN`, and
+`teardown: NOT_STARTED`. When the catalog is trustworthy, its
+non-Pro executable scenarios are marked `NOT_PROVEN`; if the
+catalog itself is invalid, the scenario roster is empty rather
+than fabricated. No WordPress provisioning or browser evidence
+is admitted. Unsafe/symlinked artifact destinations remain a
+separate fail-closed boundary where reliable output cannot be written.

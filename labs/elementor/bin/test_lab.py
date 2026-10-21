@@ -240,6 +240,125 @@ class LabTests(unittest.TestCase):
                 self.assertEqual(evidence['teardown'], 'NOT_STARTED')
                 self.assertIn('differs from HEAD', evidence['setup_error'])
 
+    def test_acorn_pre_admission_value_error_finalizes_without_provisioning(self):
+        """Execute the actual Acorn validator on a mutated source copy."""
+        import os
+        import shutil
+        from unittest.mock import patch
+
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'lab'
+            shutil.copytree(lab.ROOT / 'tests', root / 'tests')
+            for name in ('predicate-contract.json', 'playwright.config.mjs'):
+                shutil.copyfile(lab.ROOT / name, root / name)
+            bad = root / 'tests/native.spec.mjs'
+            bad.write_text(bad.read_text().replace(
+                "await productAssertion('C:measured-geometry'",
+                "await unauthorizedAssertion('C:measured-geometry'", 1))
+            artifacts = root / 'artifacts'
+            artifacts.mkdir()
+            (artifacts / 'result.json').write_text('{"stale": true}')
+            # The real parser is used. Only checkout/fingerprint acquisition is
+            # simulated because this copy is deliberately not a Git checkout.
+            with patch.object(lab, 'ROOT', root), \
+                 patch.object(lab, 'ART', artifacts), \
+                 patch.object(lab, 'test_hash', return_value='fixture-test-hash'), \
+                 patch.object(lab, 'actual_git_checkout',
+                              return_value='a' * 40), \
+                 patch.object(lab, 'require_exact_source',
+                              return_value='a' * 40), \
+                 patch.object(lab, 'wp_env_profile') as provisioning, \
+                 patch.dict(os.environ, {'EXPECTED_SOURCE_SHA': 'a' * 40}):
+                self.assertEqual(lab.execute(p, 'C'), 2)
+                provisioning.assert_not_called()
+                evidence = json.loads((artifacts / 'result.json').read_text())
+                self.assertNotIn('stale', evidence)
+                self.assertEqual(evidence['execution'], 'NOT_PROVEN')
+                self.assertFalse(evidence['provenance_verified'])
+                self.assertIn('source_contract_error', evidence)
+                self.assertEqual(evidence['source_commit'], 'UNBOUND')
+                self.assertNotIn('provenance_error', evidence)
+                self.assertIn('Structural source qualification failed',
+                              evidence['source_contract_error'])
+                self.assertEqual(evidence['teardown'], 'NOT_STARTED')
+                self.assertIsNone(evidence['installed'])
+                self.assertTrue(all(s['status'] == 'NOT_PROVEN'
+                                    for s in evidence['scenarios'] if s['test_identity']))
+                self.assertNotIn('playwright.json',
+                                 [x.name for x in artifacts.iterdir()])
+
+    def test_unavailable_test_fingerprint_never_reuses_stale_evidence(self):
+        import os
+        from unittest.mock import patch
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        with tempfile.TemporaryDirectory() as td:
+            artifacts = Path(td) / 'artifacts'
+            artifacts.mkdir()
+            (artifacts / 'result.json').write_text('{"execution":"VERIFIED_PASS"}')
+            (artifacts / 'playwright.json').write_text('{"previous":true}')
+            with patch.object(lab, 'ART', artifacts), \
+                 patch.object(lab, 'test_hash',
+                              side_effect=ValueError('symlinked test source')), \
+                 patch.object(lab, 'wp_env_profile') as provisioning, \
+                 patch.dict(os.environ, {'EXPECTED_SOURCE_SHA': 'a' * 40}):
+                self.assertEqual(lab.execute(p, 'O'), 2)
+                provisioning.assert_not_called()
+                evidence = json.loads((artifacts / 'result.json').read_text())
+                self.assertIsNone(evidence['test_sha256'])
+                self.assertEqual(evidence['source_commit'], 'UNBOUND')
+                self.assertFalse(evidence['provenance_verified'])
+                self.assertEqual(evidence['execution'], 'NOT_PROVEN')
+                self.assertIn('Source fingerprint unavailable',
+                              evidence['provenance_error'])
+                self.assertNotIn('source_contract_error', evidence)
+                self.assertEqual(evidence['teardown'], 'NOT_STARTED')
+                self.assertFalse((artifacts / 'playwright.json').exists())
+                self.assertTrue(all(item['status'] == 'NOT_PROVEN'
+                                    for item in evidence['scenarios']
+                                    if item['test_identity']))
+
+    def test_invalid_catalog_does_not_fabricate_scenario_roster(self):
+        import os
+        from unittest.mock import patch
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        with tempfile.TemporaryDirectory() as td:
+            artifacts = Path(td) / 'artifacts'
+            with patch.object(lab, 'ART', artifacts), \
+                 patch.object(lab, 'catalog',
+                              side_effect=ValueError('Invalid catalog structure')), \
+                 patch.object(lab, 'wp_env_profile') as provisioning, \
+                 patch.dict(os.environ, {'EXPECTED_SOURCE_SHA': 'a' * 40}):
+                self.assertEqual(lab.execute(p, 'all'), 2)
+                provisioning.assert_not_called()
+                evidence = json.loads((artifacts / 'result.json').read_text())
+                self.assertIsNone(evidence['test_sha256'])
+                self.assertEqual(evidence['source_commit'], 'UNBOUND')
+                self.assertEqual(evidence['scenarios'], [])
+                self.assertEqual(evidence['execution'], 'NOT_PROVEN')
+                self.assertIn('source_contract_error', evidence)
+                self.assertIsNone(evidence['environment_fingerprint'])
+
+    def test_integrity_and_structural_failure_diagnostics_do_not_collapse(self):
+        from unittest.mock import patch
+        import os
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            with patch.object(lab, 'ART', root / 'artifacts'), \
+                 patch.object(lab, 'require_exact_source',
+                              side_effect=RuntimeError('Dirty tracked source')), \
+                 patch.object(lab, 'validate_qualification_coverage') as validate, \
+                 patch.object(lab, 'wp_env_profile') as provisioning, \
+                 patch.dict(os.environ, {'EXPECTED_SOURCE_SHA': lab.actual_git_checkout()}):
+                self.assertEqual(lab.execute(p, 'O'), 2)
+                provisioning.assert_not_called()
+                validate.assert_not_called()
+                result = json.loads((root / 'artifacts/result.json').read_text())
+                self.assertIn('provenance_error', result)
+                self.assertNotIn('source_contract_error', result)
+                self.assertEqual(result['execution'], 'NOT_PROVEN')
+
     def test_workflow_binds_expected_and_actual_head(self):
         flow = (lab.ROOT.parent.parent / '.github/workflows/elementor-lab.yml').read_text()
         self.assertIn('ref: ${{ github.event.pull_request.head.sha || github.sha }}', flow)
