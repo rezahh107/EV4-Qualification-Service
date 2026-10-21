@@ -1020,7 +1020,7 @@ const observe = async (_identity, _acquire) => ({
         (root / 'element-ids.json').write_text(json.dumps(ids))
         native = json.dumps([{'id': container, 'elType':'container', 'elements':[
             {'id':atomic, 'elType':'widget', 'widgetType':'e-heading',
-             'settings':{'title':{'$type':'escaped-html','value':'EV4 Atomic Heading'}}}
+             'settings':{'title':{chr(36) * 2 + 'type':'escaped-html','value':'EV4 Atomic Heading'}}}
         ]}])
         (root / 'native-storage-sample.json').write_text(json.dumps({
             'fixture_post_id':'5', 'generated_element_ids':ids,
