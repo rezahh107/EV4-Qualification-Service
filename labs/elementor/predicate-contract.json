@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "source_profile": "core-4.3.5-wp-7.1.3",
+  "predicates": {
+    "A:native-duplicate-delete": "dfc2f10de7ffd585b2e5fabfb8e3ac7a816103250911c302b9864ae542933936",
+    "A:native-parent-child": "10adba5035610edfae3c69586c80ddbdf639d5da686100628752cee3c502574b",
+    "B:native-flex-container": "86fda15fb968306a76461997d7d47521d4b7ff201d366591884481edee00e4e8",
+    "C:measured-geometry": "5a1780e5385db0fe7ec6d51faba120a349febd6242670650765dab48de7a2d54",
+    "D:atomic-semantic-heading": "d2c66e36904d2492cf5eecd5ca415c0b99f35e42ffc805ca3aad8fd56c9f6649",
+    "E:native-global-class-persistence": "f21ec6ceb59df3dafd7d8201e31e7b6b9c7ead44bfc6cf4c9174376c30691161",
+    "I:keyboard-native-link": "a8e9c929a3fdece4c621115027cde1783768bef7120615681fa06ab2c0c97c0a",
+    "I:native-link-activation": "9d68fa54c911e12d930a6832163019629990ae8e84fcf8e25b02f1fa80cad2db",
+    "K:ten-viewport-geometry": "fbfe005bf1efd17d779483d95b160f7c5789dafbc4d2a92ef52cc7299d1a0344",
+    "L:contrast-aa-default-button": "4791005ca28abf9aa7ffe7b937408d7394e00dcd06df0920206fda6361bb6fe1",
+    "L:keyboard-tab-reachability": "9bf9d8f08f04a2c77f77851a02c0c418f85a6ad1dde14ec462824b280b9fb95e",
+    "L:semantic-heading-name": "d0b71acb550ff0e97ab03b02a46fe3be60e849cf861bf49a9e936a87ea5e0235",
+    "M:native-editor-create-reopen": "f3be1227ea5723d96eef6593518f7713a546644a93a7283f44bff760a49e1233",
+    "N:atomic-and-legacy-coexist": "c2f9c62f55c2748e0a0aeff7d9efa65170b22fc44f946bda383caba6118ae056",
+    "O:installed-runtime-browser": "b26863deee7ecdc2281605d1d122e654e5bedbc4b666a8a014e838da3cc2f175"
+  },
+  "scenario_source": {
+    "A:native-duplicate-delete": "338eee5c0a9fe61052bc79d48e15f47bd283e4fa091d8237ad822cb442ba1592",
+    "A:native-parent-child": "1953185695893f35ae5a7fecd89b6e50f15a2d24e3c12924a13757323debf13b",
+    "B:native-flex-container": "7cc7b7ccf2f2b5a80f4aec8b6de9f938ef373c618b35165f25ab7e76a080244b",
+    "C:measured-geometry": "6ecfccec92fa45a0eb865ada82883929a8bfcf6ef41fa724de150a831d335470",
+    "D:atomic-semantic-heading": "90bfa3cf384d55f44f1ccbf10645dd5dff345ca0e56e6d34afcc2e4592f1d6f8",
+    "E:native-global-class-persistence": "6dbbb6ee701ac8eb46c5b1534de6f3e383d26a30eec627bb1e50e5033efa2fb0",
+    "I:keyboard-native-link": "9ed94d1330693d7407577718e40e56b98071bc1fded387126007de4a1da7bd2c",
+    "I:native-link-activation": "cba663fd4f1d82bab0d07b10891787997be383e800ce1856ba6553843cfa8024",
+    "K:ten-viewport-geometry": "8055998b856343d3fcb8abae5f0f170ddceb40f8d84ea16669f7d801e1ec0925",
+    "L:contrast-aa-default-button": "631ef4eb5fe10188b85d2f05df91c05d1b6d7ed602e7332a082fa404889bd104",
+    "L:keyboard-tab-reachability": "51693443aa91ee654b11a5e0e8b5bc9a9a8f9d912179f1e3fa8eaf69323db40f",
+    "L:semantic-heading-name": "679fb1cfe66e3de14b1b284b049e0fb90a165031f4856d89d2d740853ae847b0",
+    "M:native-editor-create-reopen": "41a0eb35932c44bfdf611c81791c627e062f2a1ab4ca5badddf2a6760cac6615",
+    "N:atomic-and-legacy-coexist": "1fcceb7005e232c8939979b6f46eeb8f9e59bb4687abfc7298e2c6c8a7f5194a",
+    "O:installed-runtime-browser": "3b397c70f25242b06fb9c2508348f4f8232d1a71a32ef8ec53f0880fcd82aafc"
+  }
+}

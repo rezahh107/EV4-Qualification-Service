@@ -1,0 +1,17 @@
+{
+  "name": "ev4-elementor-compatibility-lab",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "lab": "python3 bin/lab.py",
+    "catalog": "python3 bin/lab.py catalog",
+    "test": "playwright test",
+    "check": "python3 -m unittest discover -s bin -p 'test_*.py' -v"
+  },
+  "devDependencies": {
+    "@wordpress/env": "11.17.0",
+    "@playwright/test": "1.58.2",
+    "acorn": "8.18.0"
+  }
+}

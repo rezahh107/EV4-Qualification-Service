@@ -1,0 +1,5 @@
+.wp-env.json
+.lab-state/
+artifacts/
+node_modules/
+package-lock.json

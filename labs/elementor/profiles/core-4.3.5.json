@@ -1,0 +1,28 @@
+{
+  "id": "core-4.3.5-wp-7.1.3",
+  "wordpress": "7.1.3",
+  "php": "8.3",
+  "mariadb": "11.4",
+  "elementor": "4.3.5",
+  "theme": {
+    "slug": "hello-elementor",
+    "version": "3.5.1"
+  },
+  "plugins": [],
+  "features": {
+    "atomic_editor": "released-default-not-assumed-verified"
+  },
+  "breakpoints": [
+    320,
+    360,
+    375,
+    390,
+    412,
+    414,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "scope": "GENERAL_LAB_VERIFIED"
+}

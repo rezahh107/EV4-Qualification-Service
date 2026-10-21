@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "domains": [
+    {
+      "id": "A",
+      "title": "Structure and elements",
+      "scenarios": [
+        {
+          "id": "native-parent-child",
+          "test": "A:native-parent-child"
+        },
+        {
+          "id": "movement-duplication-deletion",
+          "test": null
+        },
+        {
+          "id": "native-duplicate-delete",
+          "test": "A:native-duplicate-delete"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "title": "Layout",
+      "scenarios": [
+        {
+          "id": "native-flex-container",
+          "test": "B:native-flex-container"
+        },
+        {
+          "id": "grid-and-wrap-controls",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "title": "Sizing",
+      "scenarios": [
+        {
+          "id": "measured-geometry",
+          "test": "C:measured-geometry"
+        },
+        {
+          "id": "units-and-aspect-ratio",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "title": "Typography",
+      "scenarios": [
+        {
+          "id": "atomic-semantic-heading",
+          "test": "D:atomic-semantic-heading"
+        },
+        {
+          "id": "native-partial-text-colors",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "title": "Design system",
+      "scenarios": [
+        {
+          "id": "classes-variables-precedence",
+          "test": null
+        },
+        {
+          "id": "native-global-class-persistence",
+          "test": "E:native-global-class-persistence"
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "title": "Components",
+      "scenarios": [
+        {
+          "id": "instances-variants-overrides",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "G",
+      "title": "Positioning",
+      "scenarios": [
+        {
+          "id": "relative-absolute-stacking",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "H",
+      "title": "Media",
+      "scenarios": [
+        {
+          "id": "native-image-svg-background",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "I",
+      "title": "Interactions",
+      "scenarios": [
+        {
+          "id": "native-link-activation",
+          "test": "I:native-link-activation"
+        },
+        {
+          "id": "hover-focus-and-forms",
+          "test": null
+        },
+        {
+          "id": "keyboard-native-link",
+          "test": "I:keyboard-native-link"
+        }
+      ]
+    },
+    {
+      "id": "J",
+      "title": "Dynamic content",
+      "scenarios": [
+        {
+          "id": "native-wordpress-binding",
+          "test": null
+        },
+        {
+          "id": "pro-loops",
+          "test": null,
+          "requires_pro": true
+        }
+      ]
+    },
+    {
+      "id": "K",
+      "title": "Responsive",
+      "scenarios": [
+        {
+          "id": "ten-viewport-geometry",
+          "test": "K:ten-viewport-geometry"
+        }
+      ]
+    },
+    {
+      "id": "L",
+      "title": "Accessibility",
+      "scenarios": [
+        {
+          "id": "semantic-heading-name",
+          "test": "L:semantic-heading-name"
+        },
+        {
+          "id": "keyboard-tab-reachability",
+          "test": "L:keyboard-tab-reachability"
+        },
+        {
+          "id": "contrast-aa-default-button",
+          "test": "L:contrast-aa-default-button"
+        }
+      ]
+    },
+    {
+      "id": "M",
+      "title": "Persistence",
+      "scenarios": [
+        {
+          "id": "native-editor-create-reopen",
+          "test": "M:native-editor-create-reopen"
+        }
+      ]
+    },
+    {
+      "id": "N",
+      "title": "Compatibility",
+      "scenarios": [
+        {
+          "id": "atomic-and-legacy-coexist",
+          "test": "N:atomic-and-legacy-coexist"
+        },
+        {
+          "id": "upgrade-legacy-content",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "O",
+      "title": "Installation and lifecycle",
+      "scenarios": [
+        {
+          "id": "installed-runtime-browser",
+          "test": "O:installed-runtime-browser"
+        },
+        {
+          "id": "upgrade-recovery",
+          "test": null
+        }
+      ]
+    }
+  ]
+}
