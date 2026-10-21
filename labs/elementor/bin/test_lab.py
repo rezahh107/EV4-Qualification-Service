@@ -987,6 +987,246 @@ const observe = async (_identity, _acquire) => ({
         # The post-status and WP-CLI branches are already exercised by the
         # existing storage transport/publication regression test.
 
+    def _build_ci_gate_fixture(self, root, *, contrast_fail=True):
+        """Synthetic current-run catalog/Playwright/receipt fixture; not runtime proof."""
+        import hashlib
+        import os
+        p = lab.profile(lab.ROOT / 'profiles/core-4.3.5.json')
+        head = lab.actual_git_checkout()
+        result = lab.template(p, 'all')
+        result.update(
+            source_commit=head, checkout_commit=head, actual_checkout_commit=head,
+            expected_source_commit=head, provenance_verified=True,
+            github_run='ci-gate-test-run', github_attempt='1',
+            teardown='VERIFIED', setup_error=None, fixture_post_id='5',
+            execution='VERIFIED_FAIL' if contrast_fail else 'INCOMPLETE'
+        )
+        installed = {
+            'wordpress': '7.1.3', 'elementor': '4.3.5',
+            'theme': '3.5.1', 'php': '8.3.35', 'mariadb': '11.4.13',
+            'atomic_editor_option': '',
+            'browser': {'engine': 'chromium', 'version': '145.0.7632.6'},
+        }
+        result['environment_fingerprint'] = lab.digest({
+            'requested': p, 'installed': installed,
+            'test_sha256': result['test_sha256'],
+            'catalog_sha256': lab.digest(lab.CAT.read_bytes())
+        })
+        installed['atomic_editor_observed'] = True
+        result['installed'] = installed
+        atomic, container = '2eb52f4', '5509617'
+        ids = {'atomic': atomic, 'container': container}
+        root.mkdir(parents=True, exist_ok=True)
+        (root / 'element-ids.json').write_text(json.dumps(ids))
+        native = json.dumps([{'id': container, 'elType':'container', 'elements':[
+            {'id':atomic, 'elType':'widget', 'widgetType':'e-heading',
+             'settings':{'title':{'$type':'escaped-html','value':'EV4 Atomic Heading'}}}
+        ]}])
+        (root / 'native-storage-sample.json').write_text(json.dumps({
+            'fixture_post_id':'5', 'generated_element_ids':ids,
+            'raw_elementor_data':native, 'post_status':'publish'
+        }))
+        result['fixture_storage_probe'] = {
+            'state':'VERIFIED', 'published':True, 'atomic_data':True,
+            'generated_atomic_id':atomic, 'generated_container_id':container,
+            'title_type':'escaped-html'
+        }
+        result['elementor_storage'] = 'Verified native _elementor_data and publication'
+        ratio = 1.9866101561483547 if contrast_fail else 7.2
+        (root / 'accessibility-contrast.json').write_text(
+            json.dumps({'contrast':ratio, 'foreground':'rgb(255,255,255)',
+                        'background':'rgb(97,206,112)'}))
+        receipts = root / 'observation-provenance'
+        receipts.mkdir()
+        specs = []
+        for n,item in enumerate(result['scenarios']):
+            identity = item['test_identity']
+            if not identity:
+                continue
+            failure = contrast_fail and identity == lab.CI_INFORMATIONAL
+            item['status'] = 'VERIFIED_FAIL' if failure else 'VERIFIED_PASS'
+            observation = {'fixture_measurement': n, 'identity':identity}
+            sha = hashlib.sha256(json.dumps(
+                observation, separators=(',', ':'), ensure_ascii=False
+            ).encode()).hexdigest()
+            name = identity.replace(':','__')
+            (receipts / (name+'.observation.json')).write_text(json.dumps({
+                'state':'COMPLETE', 'identity':identity, 'sha256':sha,
+                'value':observation
+            }))
+            (receipts / (name+'.assertion.json')).write_text(json.dumps({
+                'state':'PRODUCT_FAIL' if failure else 'PRODUCT_PASS',
+                'identity':identity,'observation_sha256':sha
+            }))
+            item['observed'] = {
+                'assertion_origin':'EXPLICIT_PLAYWRIGHT_STEP',
+                'qualified_step_count':1, 'qualified_step_failed':failure,
+                'observation_state':'COMPLETE',
+                'product_assertion_state':'PRODUCT_FAIL' if failure else 'PRODUCT_PASS',
+                'observation_sha256':sha,
+            }
+            if identity == lab.CI_INFORMATIONAL:
+                item['expected'] = {'minimum_normal_text_contrast_ratio':4.5}
+                item['observed']['measured_css'] = {'contrast': ratio}
+            step = {'title': lab.QUALIFIED_STEP_PREFIX + identity}
+            if failure:
+                step['error'] = {'message':'Actual product predicate mismatch'}
+            attempt = {
+                'status':'failed' if failure else 'passed',
+                'errors':[{'message':'Product mismatch'}] if failure else [],
+                'retry':0, 'steps':[step]
+            }
+            specs.append({'title':'['+identity+'] native scenario', 'file':'native.spec.mjs',
+                          'tests':[{'expectedStatus':'passed',
+                                    'status':'unexpected' if failure else 'expected',
+                                    'results':[attempt]}]})
+        report = {'errors':[], 'suites':[{'specs':specs}],
+                  'stats':{'expected':14 if contrast_fail else 15,
+                           'unexpected':1 if contrast_fail else 0,
+                           'skipped':0, 'flaky':0}}
+        (root/'result.json').write_text(json.dumps(result))
+        (root/'playwright.json').write_text(json.dumps(report))
+        return p,head,result,report
+
+    def test_explicit_ci_gate_admits_only_complete_current_run_evidence(self):
+        import copy
+        import os
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            p,head,positive,report = self._build_ci_gate_fixture(root)
+            env={'EXPECTED_SOURCE_SHA':head, 'GITHUB_RUN_ID':'ci-gate-test-run',
+                 'GITHUB_RUN_ATTEMPT':'1'}
+            with patch.object(lab,'ART',root), patch.dict(os.environ,env):
+                verdict = lab.verify_ci_acceptance(
+                    positive,report,p,selected='all',lab_exit=2,expected=head)
+                self.assertEqual(verdict['ci_acceptance'],'PASS')
+                self.assertEqual(verdict['product_execution'],'VERIFIED_FAIL')
+                self.assertEqual(positive['execution'],'VERIFIED_FAIL')
+                self.assertEqual(positive['scenarios'][22]['status'],'VERIFIED_FAIL')
+
+                def rejected(result=None, playwright=None, **kwargs):
+                    with self.assertRaises(ValueError):
+                        lab.verify_ci_acceptance(
+                            result if result is not None else copy.deepcopy(positive),
+                            playwright if playwright is not None else copy.deepcopy(report),
+                            p,selected=kwargs.get('selected','all'),
+                            lab_exit=kwargs.get('lab_exit',2),
+                            expected=kwargs.get('expected',head))
+
+                # A different failing executable test can never be informational.
+                altered = copy.deepcopy(positive)
+                altered['scenarios'][0]['status'] = 'VERIFIED_FAIL'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                contrast = next(i for i in altered['scenarios']
+                    if i['test_identity']==lab.CI_INFORMATIONAL)
+                contrast['status'] = 'NOT_PROVEN'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['teardown']='NOT_PROVEN: cleanup error'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['setup_error']='WordPress provisioning failed'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['fixture_storage_probe']['state']='MISMATCH'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['fixture_storage_probe']['state']='UNAVAILABLE'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['installed']=None
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['provenance_verified']=False
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['source_contract_error']='AST mismatch'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['test_sha256']='tampered'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['github_run']='previous-ci-run'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['actual_checkout_commit']='0'*40
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['scenarios'][1]['status']='VERIFIED_PASS'
+                rejected(result=altered)
+                altered = copy.deepcopy(report)
+                altered['errors']=[{'message':'Unexpected failure'}]
+                rejected(playwright=altered)
+                altered = copy.deepcopy(report)
+                altered['suites'][0]['specs'].pop()
+                rejected(playwright=altered)
+                altered = copy.deepcopy(report)
+                altered['suites'][0]['specs'].append({
+                    'title':'Unclassified failure', 'file':'nested.spec.mjs',
+                    'tests':[{'status':'unexpected', 'results':[{'status':'failed'}]}]})
+                rejected(playwright=altered)
+                altered = copy.deepcopy(report)
+                altered['stats']['unexpected'] = 2
+                rejected(playwright=altered)
+                altered = copy.deepcopy(report)
+                altered['suites'][0]['specs'][0]['tests'][0]['results'][0]['status']='failed'
+                rejected(playwright=altered)
+                rejected(selected='C')
+                rejected(expected='0'*40)
+                rejected(lab_exit=1)
+                (root/'native-storage-sample.json').write_text('{"malformed":true}')
+                rejected()
+                self.assertEqual(positive['execution'],'VERIFIED_FAIL')
+
+    def test_ci_gate_command_rejects_missing_browser_report_and_untrusted_source(self):
+        import os
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            p,head,result,report=self._build_ci_gate_fixture(root)
+            env={'EXPECTED_SOURCE_SHA':head, 'GITHUB_RUN_ID':'ci-gate-test-run',
+                 'GITHUB_RUN_ATTEMPT':'1'}
+            with patch.object(lab,'ART',root),patch.dict(os.environ,env):
+                with patch.object(lab,'require_exact_source',return_value=head), \
+                     patch.object(lab,'validate_qualification_coverage',return_value={}):
+                    before=(root/'result.json').read_bytes()
+                    self.assertEqual(lab.ci_acceptance_command(p,'all',2,head),0)
+                    self.assertEqual((root/'result.json').read_bytes(),before)
+                    self.assertEqual(json.loads((root/'ci-acceptance.json').read_text())
+                                     ['ci_acceptance'],'PASS')
+                    (root/'playwright.json').unlink()
+                    self.assertEqual(lab.ci_acceptance_command(p,'all',2,head),2)
+                    self.assertEqual(json.loads((root/'ci-acceptance.json').read_text())
+                                     ['ci_acceptance'],'FAIL')
+                    (root/'playwright.json').write_text('{not json')
+                    self.assertEqual(lab.ci_acceptance_command(p,'all',2,head),2)
+                    (root/'playwright.json').write_text(json.dumps(report))
+                with patch.object(lab,'require_exact_source',
+                                  side_effect=RuntimeError('Dirty tracked source')):
+                    self.assertEqual(lab.ci_acceptance_command(p,'all',2,head),2)
+                with patch.object(lab,'require_exact_source',return_value=head), \
+                     patch.object(lab,'validate_qualification_coverage',
+                                  side_effect=ValueError('Invalid predicate AST')):
+                    self.assertEqual(lab.ci_acceptance_command(p,'all',2,head),2)
+                self.assertEqual((root/'result.json').read_bytes(),before)
+
+    def test_ci_acceptance_can_admit_contrast_pass_without_a_full_catalog_pass(self):
+        import os
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            p,head,result,report=self._build_ci_gate_fixture(root,contrast_fail=False)
+            with patch.object(lab,'ART',root),patch.dict(os.environ,{
+                'EXPECTED_SOURCE_SHA':head,'GITHUB_RUN_ID':'ci-gate-test-run',
+                'GITHUB_RUN_ATTEMPT':'1'
+            }):
+                verdict=lab.verify_ci_acceptance(
+                    result,report,p,selected='all',lab_exit=2,expected=head)
+                self.assertEqual(verdict['ci_acceptance'],'PASS')
+                self.assertEqual(result['execution'],'INCOMPLETE')
+
     def test_refuse_unlicensed_pro_override(self):
         p=lab.profile(lab.ROOT/'profiles/core-4.3.5.json')
         p['plugins']=[{'slug':'elementor-pro','version':'4.3.5'}]

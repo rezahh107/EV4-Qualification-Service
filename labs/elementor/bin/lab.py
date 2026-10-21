@@ -728,6 +728,223 @@ def execute(p, selected):
     return 0 if r['execution'] == 'VERIFIED_PASS' and r['setup_error'] is None else 2
 
 
+# CI acceptance deliberately does not change result.json qualification semantics.
+# Only this reviewed full Core profile treats the recorded contrast failure as
+# informational; every other executable catalog scenario remains mandatory.
+CI_INFORMATIONAL = 'L:contrast-aa-default-button'
+
+
+def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
+    """Reject any incomplete/unclassified current-run evidence before CI admission."""
+    if selected != 'all' or p.get('id') != 'core-4.3.5-wp-7.1.3' or \
+            p.get('wordpress') != '7.1.3' or p.get('elementor') != '4.3.5' or \
+            p.get('plugins') != []:
+        raise ValueError('CI admission is limited to the reviewed full Core 4.3.5 lab')
+    if lab_exit not in (0, 2):
+        raise ValueError('Unclassified laboratory process exit: ' + str(lab_exit))
+    if result.get('schema_version') != 1 or result.get('requested') != p or \
+            result.get('profile_sha256') != digest(p) or \
+            result.get('test_sha256') != test_hash():
+        raise ValueError('Result profile or source fingerprint does not match current run')
+    if not result.get('provenance_verified') or any(
+            result.get(field) != expected for field in
+            ('source_commit', 'checkout_commit', 'actual_checkout_commit',
+             'expected_source_commit')):
+        raise ValueError('Current-run exact-Head provenance is incomplete')
+    run_id, attempt = os.getenv('GITHUB_RUN_ID'), os.getenv('GITHUB_RUN_ATTEMPT')
+    if not run_id or not attempt or \
+            result.get('github_run') != run_id or result.get('github_attempt') != attempt:
+        raise ValueError('Result is not bound to current GitHub Actions run/attempt')
+    if result.get('source_contract_error') or result.get('provenance_error') or \
+            result.get('assertion_origin_error') or result.get('setup_error') is not None or \
+            result.get('teardown') != 'VERIFIED':
+        raise ValueError('Source admission, browser qualification or cleanup failed')
+    if result.get('execution') not in ('VERIFIED_FAIL', 'INCOMPLETE'):
+        raise ValueError('Unexpected overall product qualification state')
+    installed = result.get('installed')
+    if not isinstance(installed, dict) or any(
+            installed.get(key) != value for key, value in
+            (('wordpress', p['wordpress']), ('elementor', p['elementor']),
+             ('theme', p['theme']['version']))):
+        raise ValueError('Pinned installed WordPress/Elementor runtime is unverified')
+    for key in ('php', 'mariadb'):
+        if not isinstance(installed.get(key), str) or \
+                not installed[key].startswith(p[key] + '.'):
+            raise ValueError('Installed runtime version family unavailable: ' + key)
+    browser = installed.get('browser')
+    if not isinstance(browser, dict) or browser.get('engine') != 'chromium' or \
+            not isinstance(browser.get('version'), str) or not browser['version']:
+        raise ValueError('Chromium browser identity unverified')
+    # finalize_fixture_evidence adds this proof after the environment
+    # fingerprint is computed by execute(); it is not an input to that hash.
+    measured_runtime = dict(installed)
+    measured_runtime.pop('atomic_editor_observed', None)
+    expected_environment = digest({
+        'requested': p, 'installed': measured_runtime,
+        'test_sha256': result['test_sha256'],
+        'catalog_sha256': digest(CAT.read_bytes())
+    })
+    if result.get('environment_fingerprint') != expected_environment:
+        raise ValueError('Installed environment fingerprint is inconsistent')
+
+    # M is a hard native-storage prerequisite for the admitted product tests.
+    storage = result.get('fixture_storage_probe')
+    if not isinstance(storage, dict) or storage.get('state') != 'VERIFIED' or \
+            storage.get('atomic_data') is not True or storage.get('published') is not True or \
+            result.get('elementor_storage') != 'Verified native _elementor_data and publication' or \
+            installed.get('atomic_editor_observed') is not True:
+        raise ValueError('Native Elementor storage was not structurally qualified')
+    try:
+        identity = json.loads((ART / 'element-ids.json').read_text())
+        sample = json.loads((ART / 'native-storage-sample.json').read_text())
+        proof = _inspect_atomic_document(sample['raw_elementor_data'], identity)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise ValueError('Native persisted fixture source evidence unavailable') from exc
+    if proof.get('state') != 'VERIFIED' or sample.get('post_status') != 'publish' or \
+            sample.get('fixture_post_id') != result.get('fixture_post_id') or \
+            sample.get('generated_element_ids') != identity or \
+            storage.get('generated_atomic_id') != identity.get('atomic') or \
+            storage.get('generated_container_id') != identity.get('container'):
+        raise ValueError('Native persisted fixture identity or topology mismatch')
+
+    c = catalog()
+    expected_items = [(domain['id'], item) for domain in c['domains']
+                      for item in domain['scenarios']]
+    scenarios = result.get('scenarios')
+    if not isinstance(scenarios, list) or len(scenarios) != len(expected_items):
+        raise ValueError('Scenario roster differs from the reviewed catalog')
+    expected_executed = {}
+    contrast_status = None
+    for (domain, spec), item in zip(expected_items, scenarios):
+        identity = spec['test']
+        if not isinstance(item, dict) or \
+                (item.get('capability'), item.get('scenario'), item.get('test_identity')) != \
+                (domain, spec['id'], identity):
+            raise ValueError('Scenario roster identity or ordering mismatch')
+        if identity is None:
+            allowed = 'PRO_OR_LICENSE_UNAVAILABLE' if spec.get('requires_pro') else 'NOT_EXECUTED'
+            if item.get('status') != allowed:
+                raise ValueError('Unexecuted or license-gated scenario improperly promoted')
+        else:
+            expected = 'VERIFIED_PASS'
+            if identity == CI_INFORMATIONAL:
+                expected = item.get('status')
+                if expected not in ('VERIFIED_PASS', 'VERIFIED_FAIL'):
+                    raise ValueError('Informational contrast observation is not proven')
+                contrast_status = expected
+            elif item.get('status') != expected:
+                raise ValueError('Mandatory executable product predicate failed: ' + identity)
+            expected_executed[identity] = item
+    if len(expected_executed) != 15 or contrast_status is None:
+        raise ValueError('Executable product scenario contract incomplete')
+    if result.get('execution') != ('VERIFIED_FAIL' if contrast_status == 'VERIFIED_FAIL'
+                                  else 'INCOMPLETE'):
+        raise ValueError('Overall product qualification was rewritten or inconsistent')
+
+    # Every current-run Playwright spec must belong to the approved catalog.
+    # In particular, a failed *unclassified* spec cannot disappear by only
+    # recording the known contrast failure in result.json.
+    if not isinstance(report, dict) or report.get('errors') != []:
+        raise ValueError('Playwright reporter has unclassified runner errors')
+    suites = report.get('suites')
+    if not isinstance(suites, list):
+        raise ValueError('Playwright reporter suites missing')
+    collected = {}
+    def inspect_suite(suite):
+        if not isinstance(suite, dict):
+            raise ValueError('Malformed Playwright suite')
+        for spec in suite.get('specs', []):
+            if not isinstance(spec, dict):
+                raise ValueError('Malformed Playwright spec')
+            matched = re.match(r'^\[([A-O]):([a-z0-9-]+)\]', spec.get('title', ''))
+            if not matched:
+                raise ValueError('Unclassified executable Playwright test')
+            identity = matched.group(1) + ':' + matched.group(2)
+            if identity not in expected_executed or identity in collected or \
+                    spec.get('file') != 'native.spec.mjs':
+                raise ValueError('Unknown/duplicate/unreviewed Playwright test: ' + identity)
+            records = spec.get('tests')
+            if not isinstance(records, list) or len(records) != 1:
+                raise ValueError('Ambiguous Playwright result for ' + identity)
+            record = records[0]
+            if record.get('expectedStatus') != 'passed' or \
+                    not isinstance(record.get('results'), list) or len(record['results']) != 1:
+                raise ValueError('Unavailable/ambiguous actual Playwright attempt')
+            final = record['results'][0]
+            if final.get('retry') != 0:
+                raise ValueError('Unexpected Playwright retry')
+            steps = qualified_steps(final.get('steps', []))
+            if len(steps) != 1 or steps[0].get('title') != QUALIFIED_STEP_PREFIX + identity:
+                raise ValueError('Missing/unauthorized product qualification Step')
+            actual = expected_executed[identity]['status']
+            failed = actual == 'VERIFIED_FAIL'
+            if (final.get('status') != ('failed' if failed else 'passed') or
+                    record.get('status') != ('unexpected' if failed else 'expected') or
+                    bool(steps[0].get('error')) != failed or
+                    bool(final.get('errors')) != failed):
+                raise ValueError('Browser result and product evidence disagree: ' + identity)
+            receipt = read_qualification_receipts(identity)
+            if receipt.get('observation_state') != 'COMPLETE' or \
+                    receipt.get('assertion_state') != ('PRODUCT_FAIL' if failed else 'PRODUCT_PASS') or \
+                    receipt.get('observation_sha256') != \
+                    expected_executed[identity].get('observed', {}).get('observation_sha256'):
+                raise ValueError('Current-run browser observation receipt unproven: ' + identity)
+            collected[identity] = actual
+        for child in suite.get('suites', []):
+            inspect_suite(child)
+    for suite in suites:
+        inspect_suite(suite)
+    if set(collected) != set(expected_executed):
+        raise ValueError('Mandatory executable Playwright scenario missing')
+    stats = report.get('stats')
+    number_failed = int(contrast_status == 'VERIFIED_FAIL')
+    if not isinstance(stats, dict) or any(
+            stats.get(key) != value for key, value in
+            (('expected', 15 - number_failed), ('unexpected', number_failed),
+             ('skipped', 0), ('flaky', 0))):
+        raise ValueError('Unexpected/unclassified Playwright test outcome')
+    if contrast_status in ('VERIFIED_FAIL', 'VERIFIED_PASS'):
+        measured = (ART / 'accessibility-contrast.json')
+        try:
+            contrast = json.loads(measured.read_text())
+            ratio = contrast['contrast']
+            observed = next(s for s in scenarios if s['test_identity'] == CI_INFORMATIONAL)
+            if not isinstance(ratio, (int, float)) or not 0 <= ratio or \
+                    ((ratio < 4.5) != (contrast_status == 'VERIFIED_FAIL')) or \
+                    observed.get('expected', {}).get('minimum_normal_text_contrast_ratio') != 4.5 or \
+                    observed.get('observed', {}).get('measured_css', {}).get('contrast') != ratio:
+                raise ValueError('Contrast result not supported by actual measured 4.5:1 evidence')
+        except (OSError, KeyError, TypeError) as exc:
+            raise ValueError('Measured contrast evidence unavailable') from exc
+    if lab_exit != (2 if result['execution'] != 'VERIFIED_PASS' else 0):
+        raise ValueError('Laboratory command exit does not match recorded qualification')
+    return {'ci_acceptance': 'PASS', 'product_execution': result['execution'],
+            'informational_contrast': contrast_status, 'mandatory_verified': 14,
+            'not_executed': 12, 'pro_unavailable': 1}
+
+
+def ci_acceptance_command(p, selected, lab_exit, expected):
+    """Explicit post-run admission: never alters product result.json."""
+    verdict = {'ci_acceptance': 'FAIL', 'product_execution': 'NOT_PROVEN'}
+    try:
+        require_exact_source(expected)
+        validate_qualification_coverage()
+        result = json.loads((ART / 'result.json').read_text())
+        report = json.loads((ART / 'playwright.json').read_text())
+        verdict = verify_ci_acceptance(result, report, p, selected=selected,
+                                       lab_exit=lab_exit, expected=expected)
+        code = 0
+    except (RuntimeError, ValueError, OSError, TypeError, KeyError, IndexError) as exc:
+        verdict['reason'] = str(exc)[:1500]
+        code = 2
+    ART.mkdir(parents=True, exist_ok=True)
+    (ART / 'ci-acceptance.json').write_text(json.dumps(verdict, indent=2) + '\n')
+    print('CI_ACCEPTANCE: ' + verdict['ci_acceptance'])
+    if code:
+        print('CI_ACCEPTANCE_ERROR: ' + verdict.get('reason', 'Unknown source failure'))
+    return code
+
+
 def main():
     cli = argparse.ArgumentParser()
     sub = cli.add_subparsers(dest='operation', required=True)
@@ -737,6 +954,11 @@ def main():
     sub.add_parser('catalog')
     verify = sub.add_parser('verify-checkout')
     verify.add_argument('--expected', required=True)
+    acceptance = sub.add_parser('ci-accept')
+    acceptance.add_argument('--expected', required=True)
+    acceptance.add_argument('--lab-exit', required=True, type=int)
+    acceptance.add_argument('--profile', default='profiles/core-4.3.5.json')
+    acceptance.add_argument('--capability', default='all', choices=['all', *DOMAINS])
     reuse = sub.add_parser('reuse')
     reuse.add_argument('--profile', default='profiles/core-4.3.5.json')
     reuse.add_argument('--evidence', required=True)
@@ -755,6 +977,8 @@ def main():
     p = profile((ROOT / args.profile).resolve())
     if args.operation == 'run':
         return execute(p, args.capability)
+    if args.operation == 'ci-accept':
+        return ci_acceptance_command(p, args.capability, args.lab_exit, args.expected)
     old = json.loads(Path(args.evidence).read_text())
     matching = old.get('profile_sha256') == digest(p) and old.get('test_sha256') == test_hash() and bool(old.get('environment_fingerprint'))
     print(json.dumps({'identity_match': matching,

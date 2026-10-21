@@ -264,3 +264,31 @@ catalog itself is invalid, the scenario roster is empty rather
 than fabricated. No WordPress provisioning or browser evidence
 is admitted. Unsafe/symlinked artifact destinations remain a
 separate fail-closed boundary where reliable output cannot be written.
+
+## Full Core 4.3.5 lab — CI acceptance versus product qualification
+
+The lab's `result.json` retains the original product qualification states:
+a genuine measured failure of default Elementor button contrast is
+`VERIFIED_FAIL` at the unchanged WCAG AA normal-text threshold of **4.5:1**,
+and catalog scenarios not implemented in this lab remain `NOT_EXECUTED`.
+Under Owner policy `DEFAULT_BUTTON_CONTRAST_NON_BLOCKING`, this specific
+catalog-backed observation is informational **only for full Core 4.3.5 CI
+admission**. It is not a WCAG compliance claim.
+
+The workflow captures the laboratory command exit status without suppressing
+it and calls the reviewed `ci-accept` subcommand. The gate independently
+checks actual exact-Head source bytes, Acorn source authorization, the current
+GitHub run/attempt identity, the complete current-run Playwright reporter,
+all 15 qualifying steps and hashed observation receipts, mandatory product
+predicate outcomes, known catalog-unimplemented and Pro-unavailable states,
+the measured contrast and 4.5 threshold, native Elementor storage/publication,
+runtime fingerprints, provisioning and teardown. Any missing/unclassified
+browser test or any other executed product failure rejects CI. The gate is
+limited to the full `core-4.3.5` profile; partial `--capability` requests
+are not eligible for a green *full-lab* check under this contract.
+
+The independent gate writes `artifacts/ci-acceptance.json` without
+modifying `result.json`. Success means only the explicitly mandatory,
+executed qualification and evidence-integrity predicates passed. It does
+**not** certify full A–O, Elementor Pro, or WCAG compliance. The existing
+`always()` evidence upload remains active on any failure.

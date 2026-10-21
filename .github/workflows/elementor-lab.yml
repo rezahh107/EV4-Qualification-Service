@@ -50,12 +50,17 @@ jobs:
         run: python3 -m unittest discover -s bin -p 'test_*.py' -v
       - name: Falsify observation and matcher-origin boundaries
         run: npx playwright test --config=bin/origin-playwright.config.mjs
-      - name: Run real WordPress + Elementor lab
+      - name: Run real WordPress + Elementor lab and enforce explicit CI acceptance
         env:
           CAPABILITY: ${{ github.event_name == 'workflow_dispatch' && inputs.capability || 'all' }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability "$CAPABILITY"
+        run: |
+          set +e
+          python3 bin/lab.py run --profile profiles/core-4.3.5.json --capability "$CAPABILITY"
+          lab_exit=$?
+          set -e
+          python3 bin/lab.py ci-accept --expected "$EXPECTED_SOURCE_SHA" --lab-exit "$lab_exit" --profile profiles/core-4.3.5.json --capability "$CAPABILITY"
       - name: Publish evidence even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
