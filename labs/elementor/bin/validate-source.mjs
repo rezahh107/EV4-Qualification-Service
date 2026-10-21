@@ -422,7 +422,7 @@ if (contract.schema_version !== 2 ||
   reject('Reviewed scenario and predicate coverage manifest mismatch');
 for (const [id,hash] of Object.entries(predicateFingerprints)) {
   if (contract.predicates[id] !== hash)
-    reject('Reviewed product predicate modified without approval: ' + id);
+    reject('Reviewed product predicate modified without approval: ' + id + ' actual=' + hash + ' source_actual=' + scenarioSourceFingerprints[id]);
 }
 for (const [id,hash] of Object.entries(scenarioSourceFingerprints)) {
   if (contract.scenario_source[id] !== hash)
