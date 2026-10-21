@@ -151,6 +151,9 @@ class LabTests(unittest.TestCase):
                 (root / 'tests' / support).write_text(
                     (lab.ROOT / 'tests' / support).read_text()
                 )
+            (root / 'playwright.config.mjs').write_text(
+                (lab.ROOT / 'playwright.config.mjs').read_text()
+            )
             with patch.object(lab, 'ROOT', root):
                 with self.assertRaisesRegex(ValueError, 'Structural source qualification failed'):
                     lab.validate_qualification_coverage()
@@ -243,6 +246,9 @@ class LabTests(unittest.TestCase):
                 )
                 for name in ('helpers.mjs','qualification.mjs','observation.mjs'):
                     (root/'tests'/name).write_text((lab.ROOT/'tests'/name).read_text())
+                (root / 'playwright.config.mjs').write_text(
+                    (lab.ROOT / 'playwright.config.mjs').read_text()
+                )
                 with patch.object(lab,'ROOT',root):
                     with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
                         lab.validate_qualification_coverage()
@@ -366,6 +372,9 @@ class LabTests(unittest.TestCase):
                 (root / 'tests' / support).write_text(
                     (lab.ROOT / 'tests' / support).read_text()
                 )
+            (root / 'playwright.config.mjs').write_text(
+                (lab.ROOT / 'playwright.config.mjs').read_text()
+            )
             with patch.object(lab, 'ROOT', root):
                 for identity, operation in calls:
                     marker = "await productAssertion('" + identity + "',observation,snapshot=>{"
@@ -445,6 +454,9 @@ class LabTests(unittest.TestCase):
                 (lab.ROOT/'predicate-contract.json').read_text())
             for name in ('helpers.mjs','qualification.mjs','observation.mjs'):
                 (root/'tests'/name).write_text((lab.ROOT/'tests'/name).read_text())
+            (root / 'playwright.config.mjs').write_text(
+                (lab.ROOT / 'playwright.config.mjs').read_text()
+            )
             with patch.object(lab,'ROOT',root):
                 for before,after in changes:
                     self.assertIn(before,original)
@@ -485,6 +497,9 @@ class LabTests(unittest.TestCase):
                 (root / 'tests' / name).write_text(
                     (lab.ROOT / 'tests' / name).read_text()
                 )
+            (root / 'playwright.config.mjs').write_text(
+                (lab.ROOT / 'playwright.config.mjs').read_text()
+            )
             with patch.object(lab, 'ROOT', root):
                 for original_code, fake_code in changes:
                     self.assertIn(original_code, original)
@@ -506,6 +521,136 @@ class LabTests(unittest.TestCase):
                     ValueError, 'Structural source qualification failed'
                 ):
                     lab.validate_qualification_coverage()
+
+    def test_recursive_playwright_discovery_is_source_authorized(self):
+        """Playwright --list sees nested runnable specs; the AST gate must reject
+        them *before* any browser fixture or test-body side effect is executed."""
+        import subprocess
+        import shutil
+        from unittest.mock import patch
+        from pathlib import Path
+
+        def clone(root):
+            shutil.copytree(lab.ROOT / 'tests', root / 'tests')
+            for name in ('predicate-contract.json', 'playwright.config.mjs'):
+                shutil.copyfile(lab.ROOT / name, root / name)
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            clone(root)
+            with patch.object(lab, 'ROOT', root):
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                nested = root / 'tests' / 'subfolder'
+                nested.mkdir()
+                (nested / 'forged.spec.mjs').write_text(
+                    'import {test} from "@playwright/test";\n'
+                    'import fs from "node:fs";\n'
+                    'test("PRI-FND-001-NESTED-EXECUTABLE",async()=>{\n'
+                    '  fs.writeFileSync("artifacts/forged-qualification.txt","forged");\n'
+                    '  await test.step("EV4_PRODUCT_ASSERTION:O:installed-runtime-browser",'
+                    'async()=>{});\n'
+                    '});\n'
+                )
+                with self.assertRaisesRegex(ValueError,
+                        'Unreviewed Playwright-discoverable or test source path'):
+                    lab.validate_qualification_coverage()
+                # Historical immediate-child source enumeration misses this.
+                self.assertNotIn('forged.spec.mjs',
+                    [p.name for p in root.joinpath('tests').iterdir() if p.is_file()])
+
+        # Exercise the actual Playwright 1.58.2 discovery on a temporary
+        # nested spec under the *real* testDir (no browser test is executed).
+        if not (lab.ROOT / 'node_modules' / '.bin' / 'playwright').is_file():
+            self.skipTest('Playwright binary unavailable: discovery execution NOT_PROVEN')
+        with tempfile.TemporaryDirectory(prefix='pri-fnd-001-',
+                                         dir=lab.ROOT / 'tests') as nested_dir:
+            specimen = Path(nested_dir) / 'nested.spec.mjs'
+            specimen.write_text(
+                'import {test} from "@playwright/test";\n'
+                'test("PRI-FND-001-NESTED-DISCOVERED",async()=>{\n'
+                '  throw Error("must not execute before qualification");\n'
+                '});\n'
+            )
+            listed = subprocess.run(
+                [lab.binary('playwright'), 'test',
+                 '--config=playwright.config.mjs', '--list'],
+                cwd=lab.ROOT, text=True, capture_output=True, timeout=50
+            )
+            self.assertEqual(listed.returncode, 0, listed.stderr[-1200:])
+            self.assertIn('PRI-FND-001-NESTED-DISCOVERED', listed.stdout)
+            with self.assertRaisesRegex(ValueError,
+                    'Unreviewed Playwright-discoverable or test source path'):
+                lab.validate_qualification_coverage()
+
+    def test_discovery_configuration_and_source_shapes_fail_closed(self):
+        import shutil
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            shutil.copytree(lab.ROOT / 'tests', root / 'tests')
+            shutil.copyfile(lab.ROOT / 'predicate-contract.json',
+                            root / 'predicate-contract.json')
+            original = (lab.ROOT / 'playwright.config.mjs').read_text()
+            configuration = root / 'playwright.config.mjs'
+            configuration.write_text(original)
+            with patch.object(lab, 'ROOT', root):
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                # Comments/formatting do not affect semantic AST identity.
+                configuration.write_text(original.replace(
+                    "testMatch: '**/*.spec.mjs'",
+                    "testMatch: /* harmless formatting */ '**/*.spec.mjs'"))
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                mutations = {
+                    'testMatch_wider': original.replace(
+                        "'**/*.spec.mjs'", "'**/*.{spec,test}.mjs'"),
+                    'testMatch_narrower': original.replace(
+                        "'**/*.spec.mjs'", "'*.spec.mjs'"),
+                    'testDir_outside': original.replace(
+                        "testDir: './tests'", "testDir: '.'"),
+                    'unreviewed_testIgnore': original.replace(
+                        "workers: 1,", "testIgnore: '**/nested/**', workers: 1,"),
+                    'dynamic_discovery': original.replace(
+                        "testMatch: '**/*.spec.mjs'",
+                        "testMatch: process.env.ANY_TEST_GLOB"),
+                }
+                for name, altered in mutations.items():
+                    with self.subTest(name=name):
+                        self.assertNotEqual(original, altered)
+                        configuration.write_text(altered)
+                        with self.assertRaisesRegex(
+                                ValueError, 'Structural source qualification failed'):
+                            lab.validate_qualification_coverage()
+                configuration.write_text(original)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                # A symlinked source/directory, even if targeting a real approved
+                # source, must never silently enter the authorized tree.
+                target = root / 'tests' / 'helpers.mjs'
+                link = root / 'tests' / 'linked.spec.mjs'
+                link.symlink_to(target)
+                with self.assertRaisesRegex(
+                        ValueError, 'Symlinked Playwright test source'):
+                    lab.validate_qualification_coverage()
+                link.unlink()
+                link.symlink_to(root / 'tests', target_is_directory=True)
+                with self.assertRaisesRegex(
+                        ValueError, 'Symlinked Playwright test source'):
+                    lab.validate_qualification_coverage()
+                link.unlink()
+                # Unexpected executable representations fail closed too.
+                (root / 'tests' / 'unauthorized.test.ts').write_text(
+                    'export const unknown = 1;')
+                with self.assertRaisesRegex(ValueError,
+                        'Unreviewed Playwright-discoverable or test source path'):
+                    lab.validate_qualification_coverage()
+
+    def test_nested_executable_mutation_changes_source_fingerprint(self):
+        with tempfile.TemporaryDirectory(prefix='pri-fnd-001-hash-',
+                                         dir=lab.ROOT / 'tests') as subdir:
+            nested = Path(subdir) / 'nested.spec.mjs'
+            nested.write_text('export const scenario = 1;\n')
+            original = lab.test_hash()
+            nested.write_text('export const scenario = 2;\n')
+            self.assertNotEqual(original, lab.test_hash())
 
     def test_module_observation_binding_is_canonical_and_closed(self):
         """Pinned Acorn rejects source-level observation substitution even if
@@ -553,6 +698,9 @@ const observe = async (_identity, _acquire) => ({
                 (root / 'tests' / name).write_text(
                     (lab.ROOT / 'tests' / name).read_text())
             path = root / 'tests/native.spec.mjs'
+            (root / 'playwright.config.mjs').write_text(
+                (lab.ROOT / 'playwright.config.mjs').read_text()
+            )
             with patch.object(lab, 'ROOT', root):
                 path.write_text(original)
                 self.assertEqual(len(lab.validate_qualification_coverage()), 15)

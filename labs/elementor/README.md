@@ -217,3 +217,9 @@ remain unchanged. Mismatched document topology yields `MISMATCH`; storage
 transport yields `UNAVAILABLE`; unqualified title encodings yield
 `UNSUPPORTED`. Existing finalized M prerequisite reconciliation preserves
 browser-only observations without elevating unqualified storage.
+
+## Executable test discovery and source-authority gate — PRI-FND-001
+
+Playwright's reviewed `testDir: './tests'` and recursive `testMatch: '**/*.spec.mjs'` define the executable browser-test set. `bin/validate-source.mjs` now verifies the entire Playwright config using its canonical Acorn AST (comment/format changes remain admissible), recursively enumerates the `tests/` tree, and rejects any unreviewed path, nested runnable spec, symbolic link, special file or unsupported representation **before browser execution**. The current approved set is `native.spec.mjs`, `helpers.mjs`, `qualification.mjs` and `observation.mjs`. Adding a legitimate spec or changing discovery configuration requires a reviewed source-contract/catalog successor; never silently skip the new executable source.
+
+Exact-source evidence fingerprints also include recursively nested test files, preventing a new nested test from reusing unchanged historical test identity. Regression tests use real Playwright `--list` to demonstrate nested spec discoverability, while the source gate rejects it before executing a test body. The existing reviewed 15 scenario/predicate AST fingerprints, native fixture storage, public result states, Acorn 8.18.0 authority and normal-text WCAG contrast threshold 4.5:1 are unchanged.

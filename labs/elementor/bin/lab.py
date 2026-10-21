@@ -101,7 +101,10 @@ def test_hash():
     paths = [ROOT / 'bin/lab.py', ROOT / 'bin/validate-source.mjs',
              ROOT / 'bin/origin-contract.spec.mjs', ROOT / 'bin/origin-playwright.config.mjs',
              ROOT / 'predicate-contract.json', ROOT / 'playwright.config.mjs',
-             ROOT / 'package.json', CAT, *sorted((ROOT / 'tests').glob('*.mjs'))]
+             ROOT / 'package.json', CAT,
+             *sorted(p for p in (ROOT / 'tests').rglob('*') if p.is_file() or p.is_symlink())]
+    if any(p.is_symlink() for p in paths):
+        raise ValueError('Symlinked test source cannot be fingerprinted')
     return digest(b''.join(
         p.relative_to(ROOT).as_posix().encode() + b'\0' + p.read_bytes()
         for p in paths

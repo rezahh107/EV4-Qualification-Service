@@ -217,11 +217,64 @@ function validateSpecModuleScope(ast, file) {
     reject(file + ': canonical spec module imports/constants incomplete');
 }
 
+// Playwright's testDir/testMatch define an executable recursive source set.
+// Verify the *entire* reviewed configuration AST before scanning test files:
+// merely checking the two property strings allows testMatch/projects/testDir
+// drift to add runnable sources outside this gate. Formatting is immaterial.
+const reviewedPlaywrightConfig = "import { defineConfig } from '@playwright/test';\nexport default defineConfig({\n  testDir: './tests',\n  testMatch: '**/*.spec.mjs',\n  workers: 1,\n  retries: 0,\n  timeout: 90000,\n  expect: { timeout: 15000 },\n  use: { baseURL: process.env.LAB_BASE_URL || 'http://localhost:8888',\n    browserName: 'chromium', headless: true,\n    screenshot: 'only-on-failure', trace: 'retain-on-failure' },\n  reporter: [['list'], ['json', {outputFile: './artifacts/playwright.json'}],\n    ['html', {outputFolder: './artifacts/html', open: 'never'}]],\n  outputDir: './artifacts/test-results',\n});\n";
+function validateDiscoveryConfig() {
+  const filename = path.join(root, 'playwright.config.mjs');
+  const stat = fs.lstatSync(filename);
+  if (!stat.isFile() || stat.isSymbolicLink())
+    reject('Unsupported or symlinked Playwright configuration');
+  const reference = parse(reviewedPlaywrightConfig,
+    {ecmaVersion:2025, sourceType:'module'});
+  if (JSON.stringify(canonicalSyntax(parseFile(filename))) !==
+      JSON.stringify(canonicalSyntax(reference)))
+    reject('Playwright executable test discovery configuration drift');
+}
+
+// A closed recursive test tree reconciles the actual Playwright **/*.spec.mjs
+// discovery with the reviewed source set. Every file/directory is inspected
+// with lstat-like directory entries; symlinks and special files fail closed.
+// New executable paths require an explicit reviewed validator/catalog update.
+function discoverReviewedTestSources() {
+  const stat = fs.lstatSync(testDir);
+  if (!stat.isDirectory() || stat.isSymbolicLink())
+    reject('Unsupported or symlinked Playwright tests directory');
+  const found = [];
+  function descend(directory, prefix = '') {
+    const entries = fs.readdirSync(directory, {withFileTypes:true})
+      .sort((a,b) => a.name.localeCompare(b.name, 'en'));
+    for (const entry of entries) {
+      const relative = prefix ? prefix + '/' + entry.name : entry.name;
+      if (entry.isSymbolicLink())
+        reject('Symlinked Playwright test source: ' + relative);
+      if (entry.isDirectory()) {
+        descend(path.join(directory, entry.name), relative);
+      } else if (entry.isFile()) {
+        found.push(relative);
+      } else {
+        reject('Unsupported Playwright test source representation: ' + relative);
+      }
+    }
+  }
+  descend(testDir);
+  const approved = new Set([
+    'native.spec.mjs', 'helpers.mjs', 'qualification.mjs', 'observation.mjs'
+  ]);
+  for (const relative of found) {
+    if (!approved.has(relative))
+      reject('Unreviewed Playwright-discoverable or test source path: ' + relative);
+  }
+  return found.filter(file => file !== 'qualification.mjs').sort();
+}
+
+validateDiscoveryConfig();
 // Every browser test is inspected: a raw test.step or an alias to .step is
 // forbidden outside the helper, regardless of its argument construction.
 const declarations = new Map();
-const files = fs.readdirSync(testDir).filter(f => f.endsWith('.mjs') &&
-  f !== 'qualification.mjs').sort();
+const files = discoverReviewedTestSources();
 let sawTestFile = false;
 for (const file of files) {
   const ast = parseFile(path.join(testDir, file));
