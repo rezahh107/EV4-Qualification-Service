@@ -1195,6 +1195,18 @@ const observe = async (_identity, _acquire) => ({
                               ('mandatory_verified', 'not_executed', 'pro_unavailable')},
                              {'mandatory_verified': 15, 'not_executed': 11,
                               'pro_unavailable': 1})
+            # The persisted public admission JSON must agree with its source roster,
+            # not merely the in-memory return value.
+            with patch.object(lab, 'ART', root), patch.dict(os.environ, env), \
+                    patch.object(lab, 'require_exact_source', return_value=head), \
+                    patch.object(lab, 'validate_qualification_coverage',
+                                 return_value={'unit-only': True}):
+                self.assertEqual(lab.ci_acceptance_command(p, 'all', 2, head), 0)
+            recorded = json.loads((root / 'ci-acceptance.json').read_text())
+            self.assertEqual({k: recorded[k] for k in
+                              ('mandatory_verified', 'not_executed', 'pro_unavailable')},
+                             {k: base_summary[k] for k in
+                              ('mandatory_verified', 'not_executed', 'pro_unavailable')})
             self.assertEqual(sum(s['status']=='NOT_EXECUTED' for s in baseline['scenarios']), 11)
             self.assertEqual(sum(s['status']=='PRO_OR_LICENSE_UNAVAILABLE'
                                  for s in baseline['scenarios']), 1)
@@ -1308,6 +1320,10 @@ const observe = async (_identity, _acquire) => ({
                 rejected(result=altered)
                 altered = copy.deepcopy(positive)
                 altered['partial_heading_storage_probe']['state']='UNAVAILABLE'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                next(x for x in altered['scenarios']
+                     if x['test_identity'] == lab.PARTIAL_ID)['status'] = 'NOT_PROVEN'
                 rejected(result=altered)
                 altered = copy.deepcopy(positive)
                 altered['scenarios'][next(n for n,x in enumerate(altered['scenarios'])
