@@ -213,8 +213,8 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
    const count=await heading.count();
    const box=count?await heading.first().boundingBox():null;
    const pageWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
-   responsive.push({width,pageWidth,right:box?box.x+box.width:null,
-    height:box?.height??null});
+   responsive.push({width,pageWidth,left:box?.x??null,
+    right:box?box.x+box.width:null,height:box?.height??null});
   }
   await page.setViewportSize({width:1440,height:900});
   await page.goto('/?page_id='+partialPageId);
@@ -261,6 +261,7 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
   expect(snapshot.responsive).toHaveLength(4);
   for(const width of snapshot.responsive){
    expect(width.pageWidth).toBeLessThanOrEqual(width.width+1);
+   expect(width.left).toBeGreaterThanOrEqual(-1);
    expect(width.right).toBeLessThanOrEqual(width.width+1);
    expect(width.height).toBeGreaterThan(0);
   }
