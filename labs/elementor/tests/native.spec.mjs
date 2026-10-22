@@ -195,6 +195,20 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
  const reopenedHeading=frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title');
  await expect(reopenedHeading).toBeVisible({timeout:15000});
  const reopenedCount=await reopenedHeading.count();
+ // Qualify a separate widget-selection versus rendered-panel identity seam.
+ // This is diagnostic-only until native 4.3.5 runtime evidence supports a
+ // readiness gate; no production title readback behavior is changed here.
+ const panelIdentity=()=>page.evaluate(()=>{
+  const panel=window.elementor?.getPanelView?.();
+  const view=panel?.getCurrentPageView?.();
+  return {selectedIds:window.elementor?.selection?.getElements?.().map(c=>c.id)??[],
+   page:panel?.getCurrentPageName?.()??null,
+   editedId:view?.getOption?.('editedElementView')?.getContainer?.()?.id??null};
+ });
+ await page.evaluate(id=>{
+  window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
+ },ids.container);
+ const beforePanel=await panelIdentity();
  await page.evaluate(id=>{
   window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
  },legacyId);
@@ -203,6 +217,11 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
  // is a harness prerequisite failure, not a qualified product mismatch.
  await expect(reopenedInput).toBeVisible({timeout:15000});
  const reopenedValue=await reopenedInput.inputValue();
+ const afterPanel=await panelIdentity();
+ fs.mkdirSync('./artifacts',{recursive:true});
+ fs.writeFileSync('./artifacts/partial-heading-panel-readiness-diagnostic.json',
+  JSON.stringify({containerId:ids.container,headingId:legacyId,
+   beforePanel,afterPanel,titleValue:reopenedValue},null,2));
  const observation=await observe('D:native-partial-text-colors',async()=>{
   const widths=[320,390,768,1440];
   const responsive=[];
