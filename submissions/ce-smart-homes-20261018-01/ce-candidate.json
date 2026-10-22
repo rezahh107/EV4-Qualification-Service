@@ -1,0 +1,2319 @@
+{
+  "artifact_identity": {
+    "artifact_type": "EV4_TEMP_CE_HANDOFF",
+    "suite_id": "EV4_TEMP_OPERATIONAL_PROJECT_SUITE",
+    "suite_version": "2.8.0",
+    "handoff_protocol_version": "2.8.0",
+    "package_version": "2.8.4",
+    "artifact_id": "EV4-CE-SECTION-HEADING-SMART-HOMES-20261018-01-CANDIDATE",
+    "created_on": "2026-10-18",
+    "stage_owner": "TEMP_CE",
+    "stage_scope": "SINGLE_SECTION_HEADING_ONLY",
+    "candidate_status": "CANDIDATE_PENDING_VALIDATION",
+    "qualification_status": "NOT_RUN",
+    "official_acceptance": false,
+    "stage_completion_status": "CE_STRATEGY_CLOSED_WITH_SCOPED_EVIDENCE_BLOCKERS_NOT_OFFICIALLY_QUALIFIED"
+  },
+  "source_artifact_id": "EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01",
+  "source_byte_identity": {
+    "architect_handoff_sha256": "f4fc552693f877371da9c56a5ecb63bcdd1a3c35d4bebf5a8ddeb2b575783849",
+    "profile_sha256": "fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb",
+    "style_contract_sha256": "31760a1e1fecdd8449cf618e7f196dfb0e13703aefd45450aaad5a965fc68d1d",
+    "architect_visual_source_present": false
+  },
+  "architecture_lock": {
+    "source_architect_artifact_id": "EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01",
+    "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+    "approved_structure_tree": {
+      "external_parent": "EXISTING_SECTION_PARENT_NOT_IN_SCOPE",
+      "nodes": [
+        {
+          "node_id": "SECTION_HEADING",
+          "semantic_role": "single_section_title",
+          "tag_intent": "H2_BASELINE_CONDITIONAL_ON_PAGE_OUTLINE",
+          "node_type": "ONE_SEMANTIC_HEADING",
+          "text_source_order": "Smart Homes Are Connected. Now They Need Intelligence.",
+          "inline_segments": [
+            {
+              "segment_id": "base",
+              "text": "Smart Homes Are Connected. Now They Need ",
+              "emphasis_role": "base_heading_text"
+            },
+            {
+              "segment_id": "accent",
+              "text": "Intelligence.",
+              "emphasis_role": "color_accent_only"
+            }
+          ],
+          "desktop_reference_visual_lines": [
+            "Smart Homes Are Connected. Now",
+            "They Need Intelligence."
+          ],
+          "line_break_intent": "MATCH_REFERENCE_DESKTOP; does not mandate literal br or freeze mobile wrap",
+          "alignment_intent": "left_aligned_LTR",
+          "decorative_container_required": false,
+          "content_order_must_not_change": true
+        }
+      ],
+      "tree_scope_note": "Existing Section/parent placement and background excluded by Owner; no additional heading-specific wrapper is architecturally required."
+    },
+    "class_intent": {
+      "semantic_style_roles": [
+        "section_heading_base",
+        "section_heading_inline_accent"
+      ],
+      "base_color_role": "reference_dark_navy_or_compatible_existing_project_token_after_semantic_match",
+      "accent_color_role": "reference_green_only_for_Intelligence_period_included",
+      "class_scope": "Use compatible existing styles only when ownership and role genuinely match; otherwise keep styling scoped to this heading. No specific Global Class or Variable identity is proven.",
+      "typography": "Match reference by role; no global font or type scale inferred",
+      "avoid_unnecessary_class_or_container": true
+    },
+    "media_and_interaction_intent": {
+      "media": "NOT_APPLICABLE_TEXT_ONLY",
+      "interaction": "NONINTERACTIVE_SECTION_HEADING",
+      "meaningful_reading_text": "Smart Homes Are Connected. Now They Need Intelligence.",
+      "inline_accent_semantics": "PRESENTATIONAL_COLOR_NOT_SEPARATE_HEADING_OR_LINK",
+      "responsive_invariants": [
+        "one logical heading",
+        "natural text reading order",
+        "only Intelligence. accented",
+        "no clipped or overlapped text"
+      ]
+    },
+    "forbidden_work": [
+      "Do not split the sentence into multiple semantic headings.",
+      "Do not rasterize the title into an image as a substitute for live text.",
+      "Do not add an architecture-only decorative wrapper.",
+      "Do not silently change source text, sequence, emphasis scope or heading responsibility.",
+      "Do not expand scope to background or full Section layout.",
+      "Do not hard-lock desktop line break across unsupported mobile widths.",
+      "Do not let downstream stages silently change architecture_lock."
+    ]
+  },
+  "desktop_base_strategy": {
+    "selected_architecture_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+    "scope": "ONE_EDITABLE_SEMANTIC_SECTION_HEADING_WITH_INLINE_COLOR_ACCENT",
+    "strategy_decisions": [
+      {
+        "surface": "elementor_primitive",
+        "decision": "Classic/legacy Heading widget under a V4-compatible editor, one semantic heading; V4 Atomic Heading raw HTML not presumed functional",
+        "authority": "CE_BOUNDED_CONSTRUCTABILITY"
+      },
+      {
+        "surface": "inline_accent",
+        "decision": "Neutral inline span permitted by classic Heading HTML filtering; local color property on Intelligence. including period",
+        "authority": "CE_BOUNDED_CONSTRUCTABILITY"
+      },
+      {
+        "surface": "layout_and_wrap",
+        "decision": "Natural Desktop flow and content-based height; no hard line break; bounded optional heading-local soft width cap",
+        "authority": "CE_BOUNDED_CONSTRUCTABILITY"
+      },
+      {
+        "surface": "style_ownership",
+        "decision": "Local heading and inline span, no unsupported Global Class/Variable/token identity",
+        "authority": "CE_BOUNDED_CONSTRUCTABILITY"
+      },
+      {
+        "surface": "semantic_level",
+        "decision": "H2 initial, with tag-only upstream reopen if current page outline contradicts",
+        "authority": "LOCKED_UPSTREAM_CONDITIONAL"
+      }
+    ],
+    "review_units": [
+      {
+        "ru_id": "CE-RU-01",
+        "surface_id": "CE-UNMAPPED-01-TEXT_CONTENT_INTEGRITY",
+        "decision_surface": "CE-UNMAPPED-01-TEXT_CONTENT_INTEGRITY",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "text_content_integrity",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/text_content_integrity",
+        "property_owner": "HEADING_TITLE_CONTENT",
+        "implementation_mechanism": "EXACT_LOCKED_COPY",
+        "property_or_control_family": "content.text_and_order",
+        "categorical_state": "ONE_READABLE_SENTENCE",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "ARCHITECT_LOCK",
+        "verification_target": "Saved heading text, frontend accessible text",
+        "fixed_constraints": [
+          "Text exactly unchanged",
+          "Period part of green segment",
+          "One uninterrupted reading order"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "SUPPORTED",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+        ],
+        "initial_value_or_bounded_range": {
+          "copy": "Smart Homes Are Connected. Now They Need Intelligence.",
+          "base": "Smart Homes Are Connected. Now They Need ",
+          "accent": "Intelligence."
+        },
+        "unresolved_values": [],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Use exact locked copy within one heading with internal presentational span"
+      },
+      {
+        "ru_id": "CE-RU-02",
+        "surface_id": "CE-UNMAPPED-02-ONE_HEADING_PRIMITIVE",
+        "decision_surface": "CE-UNMAPPED-02-ONE_HEADING_PRIMITIVE",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "one_heading_primitive",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/one_heading_primitive",
+        "property_owner": "HEADING_WIDGET",
+        "implementation_mechanism": "CLASSIC_ELEMENTOR_HEADING_WITH_INLINE_MARKUP",
+        "property_or_control_family": "elementor.widget_and_html_semantics",
+        "categorical_state": "CLASSIC_HEADING_SINGLE_H2",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "ONE_EXISTING_PARENT_AND_ONE_HEADING_INSTANCE",
+        "verification_target": "Target saved widget type; DOM heading count; frontend",
+        "fixed_constraints": [
+          "Exactly one semantic heading element",
+          "No added decorative structural wrapper",
+          "No image title",
+          "No pair of headings",
+          "The classic widget may generate its native internal markup but CE introduces no architectural wrapper"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://elementor.com/help/heading-element/",
+          "https://elementor.com/help/inline-editing/",
+          "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+          "https://elementor.com/help/heading-widget/",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "TARGET_DEPENDENT",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://elementor.com/help/heading-element/",
+          "https://elementor.com/help/inline-editing/",
+          "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+          "https://elementor.com/help/heading-widget/",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md"
+        ],
+        "initial_value_or_bounded_range": {
+          "selected": "classic_elementor_heading_widget",
+          "reason": "V4 atomic Heading inline HTML is not reliably a parsed span; classic Heading renders filtered allowed HTML within one heading"
+        },
+        "unresolved_values": [
+          {
+            "description": "Current Target classic widget presence/role access not observed",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Adopt the legacy/classic Heading primitive, not Atomic Heading; verify its availability before Initial Build"
+      },
+      {
+        "ru_id": "CE-RU-03",
+        "surface_id": "CE-UNMAPPED-03-HEADING_LEVEL_SEMANTICS",
+        "decision_surface": "CE-UNMAPPED-03-HEADING_LEVEL_SEMANTICS",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "heading_level_semantics",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/heading_level_semantics",
+        "property_owner": "HTML_HEADING_TAG",
+        "implementation_mechanism": "HTML_H2_CONDITIONAL_PAGE_OUTLINE",
+        "property_or_control_family": "semantics.heading_level",
+        "categorical_state": "H2_WITH_ARCHITECT_REOPEN_TRIGGER",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "LOCK_WITH_PROVISIONAL_OUTLINE",
+        "verification_target": "Rendered DOM page outline and heading hierarchy",
+        "fixed_constraints": [
+          "One real heading, not styled div",
+          "Actual page outline outranks H2 initial assumption",
+          "Never pick a different heading level solely for visual size"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://elementor.com/help/heading-widget/"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "NOT_PROVEN",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://elementor.com/help/heading-widget/"
+        ],
+        "initial_value_or_bounded_range": {
+          "initial_tag": "h2",
+          "allowed_change_owner": "ARCHITECT_ON_MATERIAL_CONTRADICTION"
+        },
+        "unresolved_values": [
+          {
+            "description": "Current page outline not supplied",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Use provisional H2; if page outline contradicts, report to Architect only for tag-dimension correction"
+      },
+      {
+        "ru_id": "CE-RU-04",
+        "surface_id": "CE-UNMAPPED-04-INLINE_ACCENT_REPRESENTATION",
+        "decision_surface": "CE-UNMAPPED-04-INLINE_ACCENT_REPRESENTATION",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "inline_accent_representation",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/inline_accent_representation",
+        "property_owner": "INLINE_SPAN_CHILD_OF_HEADING",
+        "implementation_mechanism": "SEMANTICALLY_NEUTRAL_SPAN_INSIDE_CLASSIC_HEADING",
+        "property_or_control_family": "html.inline_span",
+        "categorical_state": "ONE_PRESENTATIONAL_SPAN",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "HEADING_LOCAL_SUBSTRING",
+        "verification_target": "Sanitized saved heading source; DOM single heading with child span; exact textContent",
+        "fixed_constraints": [
+          "Span inside the heading not separate heading or link",
+          "No text duplication",
+          "No color outside Intelligence.",
+          "No invalid placeholder must be left in saved/published source"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://elementor.com/help/heading-widget/"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "TARGET_DEPENDENT",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://elementor.com/help/heading-widget/"
+        ],
+        "initial_value_or_bounded_range": {
+          "markup_model": "Smart Homes Are Connected. Now They Need <span style=\"color: [ROLE_MATCHED_GREEN];\">Intelligence.</span>",
+          "placeholder_is_not_executable_css": true,
+          "accent_text": "Intelligence."
+        },
+        "unresolved_values": [
+          {
+            "description": "Actual role-matched green value and target filtered-markup persistence unverified",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Render one presentational inline span on Intelligence.; resolve actual role-matched color before live publication"
+      },
+      {
+        "ru_id": "CE-RU-05",
+        "surface_id": "CE-UNMAPPED-05-HEADING_BASE_COLOR",
+        "decision_surface": "CE-UNMAPPED-05-HEADING_BASE_COLOR",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "heading_base_color",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/heading_base_color",
+        "property_owner": "HEADING_BASE_TEXT_STYLE",
+        "implementation_mechanism": "ONE_HEADING_LOCAL_BASE_COLOR",
+        "property_or_control_family": "typography.color",
+        "categorical_state": "DARK_NAVY_ROLE_COLOR",
+        "unit_family": "SRGB_HEX",
+        "style_or_project_binding": "LOCAL_HEADING_OR_INHERITED_ROLE_MATCH",
+        "verification_target": "Computed color and contrast on frontend",
+        "fixed_constraints": [
+          "Base text remains dark navy",
+          "No invented color token",
+          "Do not change unrelated headings",
+          "Contrast must be verified against Owner-managed background"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "NOT_PROVEN",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "initial_value_or_bounded_range": {
+          "initial": "INHERIT_ONLY_IF_SEMANTICALLY_ROLE_MATCHED",
+          "target_match": "REFERENCE_DARK_NAVY",
+          "numeric_color": "UNRESOLVED"
+        },
+        "unresolved_values": [
+          {
+            "description": "Exact reference navy, site token identity and background color unavailable",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Bind base text color to this heading scope and verify contrast"
+      },
+      {
+        "ru_id": "CE-RU-06",
+        "surface_id": "CE-UNMAPPED-06-INLINE_ACCENT_COLOR",
+        "decision_surface": "CE-UNMAPPED-06-INLINE_ACCENT_COLOR",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "inline_accent_color",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/inline_accent_color",
+        "property_owner": "ACCENT_SPAN_INLINE_COLOR_PROPERTY",
+        "implementation_mechanism": "INLINE_SPAN_CSS_COLOR",
+        "property_or_control_family": "css.color",
+        "categorical_state": "GREEN_ACCENT_ONLY",
+        "unit_family": "SRGB_HEX",
+        "style_or_project_binding": "LOCAL_SPAN_STYLE",
+        "verification_target": "DOM computed green on span; frontend visual; WCAG appropriate to rendered type size",
+        "fixed_constraints": [
+          "Green applies to full Intelligence. including the period",
+          "No nearby-green guess becomes project token",
+          "Contrast against actual background required"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "NOT_PROVEN",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "initial_value_or_bounded_range": {
+          "value_kind": "REFERENCE_GREEN_ROLE",
+          "exact_hex": "UNRESOLVED",
+          "fixed_selector_scope": "only the inline span"
+        },
+        "unresolved_values": [
+          {
+            "description": "Exact green unavailable because original reference bytes absent and target tokens unknown",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Set the span color from observed role-matched evidence, not invented nearby green"
+      },
+      {
+        "ru_id": "CE-RU-07",
+        "surface_id": "CE-UNMAPPED-07-TYPOGRAPHIC_BASIS",
+        "decision_surface": "CE-UNMAPPED-07-TYPOGRAPHIC_BASIS",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "typographic_basis",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/typographic_basis",
+        "property_owner": "HEADING_LOCAL_TYPOGRAPHY",
+        "implementation_mechanism": "SINGLE_HEADING_TYPOGRAPHY_PROPERTY_OWNER",
+        "property_or_control_family": "typography.font_family_weight_size_line_height",
+        "categorical_state": "ROLE_MATCHED_OR_INHERITED_UNTIL_EVIDENCE",
+        "unit_family": "INHERIT_FOR_UNPROVEN_VALUES",
+        "style_or_project_binding": "LOCAL_HEADING_STYLE",
+        "verification_target": "Computed font properties and target visual relation",
+        "fixed_constraints": [
+          "No invented global typography scale",
+          "No cross-unit equivalence without computed root font size",
+          "No responsive font scale selected"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "NOT_PROVEN",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "initial_value_or_bounded_range": {
+          "initial": "INHERIT_FOR_FONT_FAMILY_WEIGHT_SIZE_LINE_HEIGHT_IF_UNPROVEN",
+          "reference_goal": "desktop two-line text with compatible type role",
+          "global_scale": "FORBIDDEN_UNPROVEN"
+        },
+        "unresolved_values": [
+          {
+            "description": "Exact family/weight/size/line-height unmeasured",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Retain current inherited typography for unproven values; calibrate only when image/target evidence provides a bounded basis"
+      },
+      {
+        "ru_id": "CE-RU-08",
+        "surface_id": "CE-UNMAPPED-08-NORMAL_FLOW_ALIGNMENT",
+        "decision_surface": "CE-UNMAPPED-08-NORMAL_FLOW_ALIGNMENT",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "normal_flow_alignment",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/normal_flow_alignment",
+        "property_owner": "HEADING_LAYOUT",
+        "implementation_mechanism": "NORMAL_FLOW_INLINE_START_LTR",
+        "property_or_control_family": "layout.display_direction_alignment",
+        "categorical_state": "LEFT_LTR_NORMAL_FLOW",
+        "unit_family": "AUTO",
+        "style_or_project_binding": "LOCAL_HEADING_OR_INHERIT",
+        "verification_target": "Frontend text alignment and uncropped natural flow",
+        "fixed_constraints": [
+          "No absolute positioning/overlay",
+          "No architecture wrapper",
+          "Parent section outside CE heading work"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "SUPPORTED",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "initial_value_or_bounded_range": {
+          "display": "normal flow",
+          "direction": "LTR",
+          "text_align": "left",
+          "block_size": "auto"
+        },
+        "unresolved_values": [
+          {
+            "description": "Actual parent inherited direction and width not observed",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Keep heading in existing parent with ordinary flow and left LTR alignment"
+      },
+      {
+        "ru_id": "CE-RU-09",
+        "surface_id": "CE-UNMAPPED-09-DESKTOP_LINE_WRAP_AND_WIDTH",
+        "decision_surface": "CE-UNMAPPED-09-DESKTOP_LINE_WRAP_AND_WIDTH",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "desktop_line_wrap_and_width",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/desktop_line_wrap_and_width",
+        "property_owner": "HEADING_MAX_INLINE_SIZE",
+        "implementation_mechanism": "NATURAL_WRAP_WITH_OPTIONAL_HEADING_LOCAL_INLINE_SIZE_CAP",
+        "property_or_control_family": "sizing.max_inline_size_and_wrap",
+        "categorical_state": "SOFT_DESKTOP_LINE_WRAP",
+        "unit_family": "PX_MEASURED_COMPUTED_FONT",
+        "style_or_project_binding": "LOCAL_HEADING_ONLY",
+        "verification_target": "Desktop frontend text reflow line count, clipping and parent containment",
+        "fixed_constraints": [
+          "No forced br",
+          "No fixed block height",
+          "No overflow, clipping or mobile break lock",
+          "No parent layout changes",
+          "Desktop only visual intent; Responsive role owns final adaptations"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "TARGET_DEPENDENT",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+        ],
+        "initial_value_or_bounded_range": {
+          "base": "AUTO_FROM_EXISTING_PARENT",
+          "cap_eligibility": "ONLY_WHEN_NATURAL_PARENT_WRAP_DOES_NOT_MATCH_DESKTOP_REFERENCE",
+          "calibration_boundary": "max(width(first intended line),width(second intended line)) <= cap < width(first intended line + next word) as measured at the same computed font; never greater than available parent width",
+          "forced_br": false
+        },
+        "unresolved_values": [
+          {
+            "description": "Available parent width and computed text widths not observed; max-inline-size control exposure unknown",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Prefer natural wrap; any cap stays heading-local, magnitude only within a measured desktop range"
+      },
+      {
+        "ru_id": "CE-RU-10",
+        "surface_id": "CE-UNMAPPED-10-STYLE_OWNERSHIP_AND_REUSE",
+        "decision_surface": "CE-UNMAPPED-10-STYLE_OWNERSHIP_AND_REUSE",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "style_ownership_and_reuse",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/style_ownership_and_reuse",
+        "property_owner": "LOCAL_SCOPE_STYLE_POLICY",
+        "implementation_mechanism": "LOCAL_SCOPE_NO_UNPROVEN_GLOBAL_CLASS_OR_VARIABLE",
+        "property_or_control_family": "style.class_variable_local_ownership",
+        "categorical_state": "LOCAL_ONLY_UNTIL_OWNER_PROOF",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "ONE_HEADING_SCOPE",
+        "verification_target": "Current class ownership and unrelated instance regression check",
+        "fixed_constraints": [
+          "No global Profile edits",
+          "Reuse shared style only after verified semantic ownership; no automatic reuse",
+          "No accidental cross-heading color changes"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "SUPPORTED",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "initial_value_or_bounded_range": {
+          "shared_class_creation": false,
+          "global_variable_creation": false,
+          "local_base_style": true,
+          "local_accent_span_style": true
+        },
+        "unresolved_values": [
+          {
+            "description": "Existing current target classes/variables not inventoried",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Keep styling local; do not introduce global styles or classes on weak color similarity"
+      },
+      {
+        "ru_id": "CE-RU-11",
+        "surface_id": "CE-UNMAPPED-11-ACCESSIBILITY_AND_NONINTERACTION",
+        "decision_surface": "CE-UNMAPPED-11-ACCESSIBILITY_AND_NONINTERACTION",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "accessibility_and_noninteraction",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/accessibility_and_noninteraction",
+        "property_owner": "SEMANTIC_HEADING_WITH_PRESENTATIONAL_SPAN",
+        "implementation_mechanism": "NATIVE_HEADING_ACCESSIBLE_NAME",
+        "property_or_control_family": "accessibility.heading_text",
+        "categorical_state": "NATIVE_READABLE_HEADING",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "NATIVE_HTML",
+        "verification_target": "DOM title textContent, heading level, reading order, actual contrast",
+        "fixed_constraints": [
+          "Noninteractive heading",
+          "Logical reading order exact",
+          "No aria-label workaround that duplicates/changes text",
+          "Verify contrast from final computed colors"
+        ],
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "NOT_PROVEN",
+        "capability_evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "initial_value_or_bounded_range": {
+          "accessible_name": "Smart Homes Are Connected. Now They Need Intelligence.",
+          "link": false,
+          "button": false,
+          "decorative_span": "no additional announced label"
+        },
+        "unresolved_values": [
+          {
+            "description": "Current page outline and rendered contrast unavailable",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Verify one accessible real heading whose text reads exactly once"
+      },
+      {
+        "ru_id": "CE-RU-12",
+        "surface_id": "CE-UNMAPPED-12-CONSTRUCTABILITY_AND_VERIFICATION_BOUNDARY",
+        "decision_surface": "CE-UNMAPPED-12-CONSTRUCTABILITY_AND_VERIFICATION_BOUNDARY",
+        "active": true,
+        "superseded": false,
+        "locked_responsibility": "constructability_and_verification_boundary",
+        "target_node": "SECTION_HEADING",
+        "ownership_scope": "SECTION_HEADING/constructability_and_verification_boundary",
+        "property_owner": "TARGET_CAPABILITY_OWNERSHIP",
+        "implementation_mechanism": "TARGET_ENTRY_CHECK_WITH_SCOPED_STOP",
+        "property_or_control_family": "capability_and_verification",
+        "categorical_state": "SUPPORTED_AT_VERSION_LEVEL_TARGET_NOT_OBSERVED",
+        "unit_family": "NOT_APPLICABLE",
+        "style_or_project_binding": "CURRENT_TARGET_OBSERVATION",
+        "verification_target": "Saved heading source, current element/role access, frontend, accessibility",
+        "fixed_constraints": [
+          "No unsupported claim of tested current-site controls",
+          "No Builder mechanism substitution on failure",
+          "No UI click path/locator in CE",
+          "No production readiness claim"
+        ],
+        "evidence_refs": [
+          "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md",
+          "https://elementor.com/help/heading-element/"
+        ],
+        "dependencies": [],
+        "calibration_eligibility": {
+          "eligible": false,
+          "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+        },
+        "capability_status": "TARGET_DEPENDENT",
+        "capability_evidence_refs": [
+          "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md",
+          "https://elementor.com/help/heading-element/"
+        ],
+        "initial_value_or_bounded_range": {
+          "version_basis": "classic Heading accepts sanitized inline HTML; v4 and classic may coexist",
+          "target_test": "saved classic Heading with allowed span survives sanitization and published DOM",
+          "stop_condition": "if widget or markup unavailable, return to CE; do not split semantic heading"
+        },
+        "unresolved_values": [
+          {
+            "description": "Target site/version/user role/permissions not provided",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          },
+          {
+            "description": "Target sanitization/render not tested",
+            "evidence_required": true,
+            "blocks_initial_build": false,
+            "blocks_production_closure": true
+          }
+        ],
+        "closure_state": "CLOSED",
+        "strategy_closed": true,
+        "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+        "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+        "builder_execution_seed_effect": "Before proceeding with the selected mechanism, verify target capability; failure returns to CE rather than delegating strategy"
+      }
+    ],
+    "not_applicable_records": [
+      {
+        "surface": "media_asset_representation",
+        "disposition": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "reason": "The locked heading is text only and has no media element"
+      },
+      {
+        "surface": "interactive_link_button_behavior",
+        "disposition": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "reason": "Locked title is noninteractive; no navigation or command"
+      },
+      {
+        "surface": "decorative_overlay_and_wrapper",
+        "disposition": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "reason": "No overlay or added decorative wrapper is part of selected architecture"
+      },
+      {
+        "surface": "external_section_background_and_layout",
+        "disposition": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "reason": "Owner expressly excludes existing parent/background from this heading scope"
+      },
+      {
+        "surface": "responsive_breakpoints_and_route",
+        "disposition": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "reason": "CE carries responsive invariants only; Responsive role chooses final strategy"
+      },
+      {
+        "surface": "repeated_instances_and_component_multiplication",
+        "disposition": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "reason": "Only one heading instance is locked"
+      }
+    ],
+    "nontrivial_parameter_basis": {
+      "CE-RU-01": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-02": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://elementor.com/help/heading-element/",
+          "https://elementor.com/help/inline-editing/",
+          "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+          "https://elementor.com/help/heading-widget/",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md"
+        ],
+        "rationale": "Official V4 coexistence, classic Heading source sanitization/render path, and atomic raw-markup encoding establish the more robust compatible strategy"
+      },
+      "CE-RU-03": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://elementor.com/help/heading-widget/"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-04": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://elementor.com/help/heading-widget/"
+        ],
+        "rationale": "The code model is illustrative semantic serialization, not a copy-paste runnable markup while color is unresolved"
+      },
+      "CE-RU-05": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-06": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-07": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-08": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-09": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+        ],
+        "rationale": "The optional cap is a single closed conditional policy tied to reference mismatch, not permission to choose between structural strategies"
+      },
+      "CE-RU-10": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-11": {
+        "basis_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      },
+      "CE-RU-12": {
+        "basis_refs": [
+          "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+          "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+          "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md",
+          "https://elementor.com/help/heading-element/"
+        ],
+        "rationale": "Locked semantic responsibility and bounded property ownership"
+      }
+    },
+    "remaining_builder_strategy_decisions": [],
+    "project_observations_left_for_builder": [
+      "Target editor version, classic Heading availability and current user role",
+      "Target saved source preserves inline span and resulting one real heading on published frontend",
+      "Current page heading outline supports provisional H2",
+      "Parent available width and computed font metrics allow reference Desktop two-line flow",
+      "Role-compatible existing color/typography evidence, exact accent green, baseline navy, background and rendered contrast"
+    ],
+    "self_audit_status": "INTERNAL_SOURCE_FIRST_CHECKS_NOT_AN_EXTERNAL_QUALIFICATION_RESULT",
+    "builder_readiness": "NOT_OFFICIALLY_QUALIFIED_TARGET_AND_SOURCE_EVIDENCE_CHECKS_OPEN",
+    "builder_strategy_residue_comment": "No alternative primitive or markup mechanism delegated to Builder. If selected mechanism fails the target entry test, return affected scope to CE."
+  },
+  "builder_execution_seed": [
+    {
+      "scope": "dependency_snapshot",
+      "depends_on": [],
+      "stop_condition": "Architect scope/semantic contradiction",
+      "seed_id": "SEED-001",
+      "surface_id": "CE-UNMAPPED-02-ONE_HEADING_PRIMITIVE",
+      "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+      "action_summary": "Existing parent is reused without changes; page outline and widget capability observations only",
+      "scope_boundary": "DECLARATIVE_OUTCOME_NO_UI_EXECUTION_INSTRUCTION"
+    },
+    {
+      "scope": "single_heading_semantics",
+      "depends_on": [
+        "SEED-001"
+      ],
+      "stop_condition": "Classic Heading not available or requires structural semantic change",
+      "seed_id": "SEED-002",
+      "surface_id": "CE-UNMAPPED-03-HEADING_LEVEL_SEMANTICS",
+      "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+      "action_summary": "One classic Heading widget yields exactly one actual semantic heading; H2 initial until contradictory outline evidence",
+      "scope_boundary": "DECLARATIVE_OUTCOME_NO_UI_EXECUTION_INSTRUCTION"
+    },
+    {
+      "scope": "content_and_span",
+      "depends_on": [
+        "SEED-002"
+      ],
+      "stop_condition": "Inline markup stripped, escaped, or alters text",
+      "seed_id": "SEED-003",
+      "surface_id": "CE-UNMAPPED-04-INLINE_ACCENT_REPRESENTATION",
+      "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+      "action_summary": "Locked sentence remains single accessible heading with a neutral span wrapping Intelligence. only",
+      "scope_boundary": "DECLARATIVE_OUTCOME_NO_UI_EXECUTION_INSTRUCTION"
+    },
+    {
+      "scope": "heading_local_visual_properties",
+      "depends_on": [
+        "SEED-003"
+      ],
+      "stop_condition": "Role-matched color missing prevents truthful final visual verification",
+      "seed_id": "SEED-004",
+      "surface_id": "CE-UNMAPPED-06-INLINE_ACCENT_COLOR",
+      "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+      "action_summary": "Base dark navy, accent green, local typography and ordinary LTR flow; no global class/profile mutation",
+      "scope_boundary": "DECLARATIVE_OUTCOME_NO_UI_EXECUTION_INSTRUCTION"
+    },
+    {
+      "scope": "desktop_flow_calibration",
+      "depends_on": [
+        "SEED-004"
+      ],
+      "stop_condition": "No feasible measured cap inside existing parent without overflow",
+      "seed_id": "SEED-005",
+      "surface_id": "CE-UNMAPPED-09-DESKTOP_LINE_WRAP_AND_WIDTH",
+      "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+      "action_summary": "Normal-flow content wrap, heading-local measured soft cap only if required by reference and parent geometry; no br",
+      "scope_boundary": "DECLARATIVE_OUTCOME_NO_UI_EXECUTION_INSTRUCTION"
+    },
+    {
+      "scope": "verification",
+      "depends_on": [
+        "SEED-005"
+      ],
+      "stop_condition": "Material contradiction or missing production evidence",
+      "seed_id": "SEED-006",
+      "surface_id": "CE-UNMAPPED-11-ACCESSIBILITY_AND_NONINTERACTION",
+      "selected_candidate_id": "C1_SINGLE_SEMANTIC_HEADING_INLINE_ACCENT",
+      "action_summary": "Saved widget/source, real DOM heading text, inline color, actual contrast and Desktop reflow checked against source",
+      "scope_boundary": "DECLARATIVE_OUTCOME_NO_UI_EXECUTION_INSTRUCTION"
+    }
+  ],
+  "responsive_preflight": {
+    "status": "NOT_RUN_NO_REFERENCE",
+    "supplied_references": [
+      "Desktop cropped title image only"
+    ],
+    "preserved_invariants": [
+      "Same full copy, same reading order",
+      "single heading semantics",
+      "accent remains on Intelligence.",
+      "no forced clipped text"
+    ],
+    "preliminary_risk": "Hard desktop line break or width forced into smaller viewports could cause excessive lines or overflow; do not freeze it across viewports.",
+    "downstream_reopen_trigger": "A current responsive reference requires a different content identity, semantic/source order, interaction, or topology; ordinary reflow does not reopen architecture.",
+    "forbidden_scope": "No responsive breakpoint, route or mobile typography selected here."
+  },
+  "responsive_constraints_carried_forward": {
+    "semantic_invariants": [
+      "one logical heading",
+      "natural text reading order",
+      "only Intelligence. accented",
+      "no clipped or overlapped text"
+    ],
+    "prohibitions": [
+      "No locked hard br across unknown widths",
+      "No responsive breakpoint/route/typographic scale chosen by CE"
+    ],
+    "source_ref": "architect:responsive_preflight"
+  },
+  "material_assumptions": [
+    {
+      "assumption": "The confirmed section title has an ordinary page heading parent and can use H2 as its initial semantic tag.",
+      "basis": "Owner explicitly confirmed it is a heading within a page section; official V4 Heading supports HTML tag selection.",
+      "downstream_effect": "Use provisional H2 without asserting full-page heading hierarchy.",
+      "reopen_trigger": "Current page outline demonstrates this section is nested under a different heading level."
+    },
+    {
+      "assumption": "The selected architecture applies to a desktop presentation like the supplied crop, not an entire page or section.",
+      "basis": "Owner explicitly excluded background and other Section work.",
+      "downstream_effect": "Parent dimensions and placement are outside Architect heading scope.",
+      "reopen_trigger": "Owner expands the scope to Section or page architecture."
+    }
+  ],
+  "unresolved_items": [
+    {
+      "unknown": "Actual page heading outline is not present; H2 is a conditional baseline, not independently proven.",
+      "resolution_attempts": [
+        "Owner confirmed section title role",
+        "Selected usual H2 baseline while preserving proper outline as hard constraint"
+      ],
+      "responsible_role": "ARCHITECT_ON_CONTRADICTION; CE_OR_BUILDER_MAY_REPORT_PAGE_OUTLINE_EVIDENCE",
+      "downstream_effect": "If a current heading hierarchy contradicts H2, only the tag decision is reopened; single title topology remains.",
+      "smallest_resume_input": "Current parent section heading hierarchy (page outline or relevant Navigator headings).",
+      "reopen_trigger": "Direct current page evidence shows another required section heading level."
+    },
+    {
+      "unknown": "Current target Editor V4 ability to style precisely one substring inside its Heading element was not proven by the available official docs.",
+      "resolution_attempts": [
+        "Checked current official Elementor Editor V4 Heading element and inline editing docs",
+        "Kept only the single semantic heading topology locked; no unproven inline UI mechanism asserted"
+      ],
+      "responsible_role": "CE",
+      "downstream_effect": "CE must select and justify a constructible per-substring accent mechanism; if impossible without topology/semantics change, return to Architect.",
+      "smallest_resume_input": "Target-version evidence that selected Heading content can contain/stylize an inline accent, or a feasible equally semantic text representation.",
+      "reopen_trigger": "CE establishes that required inline color cannot be represented without violating locked heading responsibility."
+    },
+    {
+      "unknown": "Target project identity and matching current design tokens are unconfirmed by the image alone.",
+      "resolution_attempts": [
+        "Loaded active NUURO Profile; used only global semantic guards, not nearest matching tokens",
+        "Did not equate screenshot green with a specific existing NUURO variable"
+      ],
+      "responsible_role": "CE_FOR_TARGET_TOKEN_OBSERVATION; ARCHITECT_ONLY_FOR_PROJECT_SCOPE_CHANGE",
+      "downstream_effect": "Use role-validated tokens if applicable; exact brand color/font binding remains unproven, but topology unaffected.",
+      "smallest_resume_input": "Current target site classes/variables or project identity only when binding materially affects the implementation.",
+      "reopen_trigger": "Current project evidence shows an authoritative conflicting established heading or color role."
+    },
+    {
+      "unknown": "Architect source image locator owner_supplied_image:/mnt/data/sshot-2.jpg is not an available source file in this CE workspace; Architect text projection itself is available",
+      "responsible_role": "SOURCE_PROVIDER_ARCHITECT_OR_OWNER",
+      "scope": "source_evidence_provenance_and_visual_values",
+      "downstream_effect": "External runner must fail closed if original source bytes/locators are required; exact reference colors and typography cannot be independently reproduced",
+      "smallest_resume_input": "Actual referenced sshot-2.jpg or immutable source reference accepted by external qualifier",
+      "reopen_trigger": "Missing original source becomes available"
+    },
+    {
+      "unknown": "Local external qualify_ce_handoff.py is unavailable in this runtime",
+      "responsible_role": "EXTERNAL_LOCAL_QUALIFICATION_RUNNER",
+      "scope": "candidate_to_official_promotion",
+      "downstream_effect": "No official acceptance or Builder-ready qualification can be asserted",
+      "smallest_resume_input": "Run qualify_ce_handoff.py with actual Architect Handoff, active Style bytes, Contract bytes and this candidate",
+      "reopen_trigger": "External qualification report becomes available"
+    },
+    {
+      "unknown": "Current target site version/editor mode/classic Heading availability and HTML sanitization not observed",
+      "responsible_role": "TARGET_OPERATOR_OR_BUILDER_ENTRY_OBSERVATION",
+      "scope": "target_capability",
+      "downstream_effect": "Initial Build must not assume current-site support; a failed entry observation returns to CE without alternative selection by Builder",
+      "smallest_resume_input": "One current target confirmation of legacy Heading availability plus saved single-heading inline-span frontend result",
+      "reopen_trigger": "Target observation contradicts version-level evidence"
+    },
+    {
+      "unknown": "Contrast and exact reference green/navy and typography not measurable without image/current-target background",
+      "responsible_role": "TARGET_OPERATOR_OR_OWNER_EVIDENCE",
+      "scope": "visual_calibration_and_production_closure",
+      "downstream_effect": "Visual matching and publication-grade accessible contrast remain unproven",
+      "smallest_resume_input": "Original visual reference or measured design tokens plus current computed target background and heading type",
+      "reopen_trigger": "Reference/target measurement received"
+    }
+  ],
+  "advisor_consultation": {
+    "status": "NOT_CONSULTED",
+    "reason": "Small text-only architecture; native single-heading structure has clear semantic precedence over split or image families, with scoped CE capability check remaining.",
+    "formal_authority": "NONE",
+    "disposition": "NOT_APPLICABLE"
+  },
+  "project_context_use": {
+    "context_ref": {
+      "context_id": null,
+      "context_version": null
+    },
+    "status": "NOT_AVAILABLE",
+    "relevant_items": [],
+    "coherence_requirements": [
+      "Retain single section heading role",
+      "Avoid unsupported extrapolation from broader NUURO corpus to this detached screenshot",
+      "Compare new heading style only with actual current target/project evidence and applicable family rules"
+    ],
+    "material_exceptions": [
+      "No standalone EV4_PROJECT_DESIGN_CONTEXT current evidence was supplied; active NUURO Profile is available separately."
+    ],
+    "viewport_scope": "DESKTOP"
+  },
+  "personal_style_use": {
+    "contract_generation": "CURRENT_1_2_1",
+    "status": "EXACT_RULES_APPLIED",
+    "profile_id": "EV4-PSP-NUURO-20260731",
+    "profile_version": "1.0.1",
+    "profile_revision": 2,
+    "profile_sha256": "fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb",
+    "considered_rule_ids": [
+      "PSR-GLOBAL-TYPE-001",
+      "PSR-COLOR-ROLE-001",
+      "PSR-CLASS-POLICY-001"
+    ],
+    "applied_rule_bindings": [
+      {
+        "rule_id": "PSR-GLOBAL-TYPE-001",
+        "rule_semantic_sha256": "a15bbba15635aa873c45e9f8153581a26fab17c91b5554c96bab20512d613c0c",
+        "disposition": "APPLIED"
+      },
+      {
+        "rule_id": "PSR-COLOR-ROLE-001",
+        "rule_semantic_sha256": "2f73e1f4732ede6015c172968dcda14f3f11e57418ef97f841fc27268239495b",
+        "disposition": "APPLIED"
+      },
+      {
+        "rule_id": "PSR-CLASS-POLICY-001",
+        "rule_semantic_sha256": "199eae625302c641ed555a4ddc2dc35de34064feab3ad38ab6471bd56c04ce53",
+        "disposition": "APPLIED"
+      }
+    ],
+    "rejected_or_overridden_rule_bindings": [],
+    "binding_explanations": [
+      {
+        "rule_id": "PSR-GLOBAL-TYPE-001",
+        "effect": "No universal typography scale inferred; role-specific reference matching only"
+      },
+      {
+        "rule_id": "PSR-COLOR-ROLE-001",
+        "effect": "Green visual similarity does not establish identical project color variable; accent binding remains role-evidence-dependent"
+      },
+      {
+        "rule_id": "PSR-CLASS-POLICY-001",
+        "effect": "Existing class/variable reusable only if semantic role/ownership fits; no unsupported forced Global Class"
+      }
+    ],
+    "analogue_trace": null,
+    "local_overrides": [],
+    "style_extension_candidate_refs": [],
+    "style_revision_recommended": false,
+    "revision_trigger_refs": [],
+    "target_project_assumption": "Profile is active in this Architect project; screenshot alone does not prove target-project NUURO membership or any exact style token.",
+    "profile_mutated": false,
+    "bindings": [
+      {
+        "rule_id": "PSR-FLEX-FIRST-001",
+        "rule_semantic_sha256": "fd6a268f187a8e6fb33fb9af3e31dc30ca984d6a88414a51fabf72eac92be51e",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Single text heading; no CE-owned one-dimensional sibling relationship"
+      },
+      {
+        "rule_id": "PSR-SPACING-8-TENDENCY-001",
+        "rule_semantic_sha256": "7580226a6352c2faf3e99f45db6b3bf16e06ae8a5694b8102d6d548235dbbd6b",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No new px spacing magnitude is authorized within single title scope"
+      },
+      {
+        "rule_id": "PSR-GLOBAL-GUTTER-001",
+        "rule_semantic_sha256": "6aaa2d1bb99bc8161c58cb0f997e9ea3312b0be43de80e7c865b3b5121eabf87",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Large Desktop section gutters belong to external excluded parent"
+      },
+      {
+        "rule_id": "PSR-FAMILY-FOUR-PEER-001",
+        "rule_semantic_sha256": "505a9e555f31b6c30707678322be0ca7d41b706511e15f5219d4bdbd1f428137",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No four equal peers"
+      },
+      {
+        "rule_id": "PSR-FAMILY-MEDIA-CONTENT-001",
+        "rule_semantic_sha256": "fb92231b265e7eec651eddb65cbc4e76f0fd2c53a5f7bc1ecb78f2216fde5799",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No two-region media and content split"
+      },
+      {
+        "rule_id": "PSR-FAMILY-INTRO-DENSE-001",
+        "rule_semantic_sha256": "6ddd4a8774a06e1120dcba6b710680324ecd9324e9e8228e9d4c162a35717648",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No short-intro/dense two-region split"
+      },
+      {
+        "rule_id": "PSR-FAMILY-CTA-15-85-001",
+        "rule_semantic_sha256": "a552b34c6efb06ec56b95d1e22dcd0439111d82fcc4769ab5546273d6b66ca63",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No CTA band"
+      },
+      {
+        "rule_id": "PSR-GLOBAL-RADIUS-001",
+        "rule_semantic_sha256": "88b87e8ae27200135e6b9675b885270fd7b2b1c9cbcf8887225b9317e7c6946b",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No role-based geometric surface radius"
+      },
+      {
+        "rule_id": "PSR-SEMANTIC-UNIT-001",
+        "rule_semantic_sha256": "039567a789778e7fd079bce5c02dd96cb8150320fd65c29585b21885ea5563e8",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No proposed cross-unit numeric equivalence; guard retained if typography requires it"
+      },
+      {
+        "rule_id": "PSR-COLOR-ROLE-001",
+        "rule_semantic_sha256": "2f73e1f4732ede6015c172968dcda14f3f11e57418ef97f841fc27268239495b",
+        "disposition": "APPLIED",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ]
+      },
+      {
+        "rule_id": "PSR-GLOBAL-TYPE-001",
+        "rule_semantic_sha256": "a15bbba15635aa873c45e9f8153581a26fab17c91b5554c96bab20512d613c0c",
+        "disposition": "APPLIED",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ]
+      },
+      {
+        "rule_id": "PSR-SHARED-FEATURE-ROW-001",
+        "rule_semantic_sha256": "b9bbe19d7878253fcc1e4620d971698055d935d65bf53604dbc93765c8dd7a97",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No icon-text feature row"
+      },
+      {
+        "rule_id": "PSR-CLASS-POLICY-001",
+        "rule_semantic_sha256": "199eae625302c641ed555a4ddc2dc35de34064feab3ad38ab6471bd56c04ce53",
+        "disposition": "APPLIED",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ]
+      },
+      {
+        "rule_id": "PSR-FAMILY-HANDS-FREE-FEATURE-ROW-001",
+        "rule_semantic_sha256": "4970c1476bbdbea623d74153b433fc1ddc7c87143c494dd6f9d311cbc6e6ef9d",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Smart Homes title is not a Hands-Free feature row"
+      },
+      {
+        "rule_id": "PSR-FAMILY-HANDS-FREE-TYPOGRAPHY-001",
+        "rule_semantic_sha256": "3910e95803cb4a75d34b894b12e5d9ad6ea98c9eaf03d8b0efe5205feac29733",
+        "disposition": "NOT_APPLICABLE_WITH_PROOF",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Smart Homes heading is not proven to be the Hands-Free family heading"
+      }
+    ]
+  },
+  "ce_style_dispositions": {
+    "profile_id": "EV4-PSP-NUURO-20260731",
+    "profile_version": "1.0.1",
+    "profile_revision": 2,
+    "profile_sha256": "fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb",
+    "contract_sha256": "31760a1e1fecdd8449cf618e7f196dfb0e13703aefd45450aaad5a965fc68d1d",
+    "profile_mutated": false,
+    "rule_dispositions": [
+      {
+        "rule_id": "PSR-FLEX-FIRST-001",
+        "rule_semantic_sha256": "fd6a268f187a8e6fb33fb9af3e31dc30ca984d6a88414a51fabf72eac92be51e",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Single text heading; no CE-owned one-dimensional sibling relationship",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-SPACING-8-TENDENCY-001",
+        "rule_semantic_sha256": "7580226a6352c2faf3e99f45db6b3bf16e06ae8a5694b8102d6d548235dbbd6b",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No new px spacing magnitude is authorized within single title scope",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-GLOBAL-GUTTER-001",
+        "rule_semantic_sha256": "6aaa2d1bb99bc8161c58cb0f997e9ea3312b0be43de80e7c865b3b5121eabf87",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Large Desktop section gutters belong to external excluded parent",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-FAMILY-FOUR-PEER-001",
+        "rule_semantic_sha256": "505a9e555f31b6c30707678322be0ca7d41b706511e15f5219d4bdbd1f428137",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No four equal peers",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-FAMILY-MEDIA-CONTENT-001",
+        "rule_semantic_sha256": "fb92231b265e7eec651eddb65cbc4e76f0fd2c53a5f7bc1ecb78f2216fde5799",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No two-region media and content split",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-FAMILY-INTRO-DENSE-001",
+        "rule_semantic_sha256": "6ddd4a8774a06e1120dcba6b710680324ecd9324e9e8228e9d4c162a35717648",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No short-intro/dense two-region split",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-FAMILY-CTA-15-85-001",
+        "rule_semantic_sha256": "a552b34c6efb06ec56b95d1e22dcd0439111d82fcc4769ab5546273d6b66ca63",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No CTA band",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-GLOBAL-RADIUS-001",
+        "rule_semantic_sha256": "88b87e8ae27200135e6b9675b885270fd7b2b1c9cbcf8887225b9317e7c6946b",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No role-based geometric surface radius",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-SEMANTIC-UNIT-001",
+        "rule_semantic_sha256": "039567a789778e7fd079bce5c02dd96cb8150320fd65c29585b21885ea5563e8",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No proposed cross-unit numeric equivalence; guard retained if typography requires it",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-COLOR-ROLE-001",
+        "rule_semantic_sha256": "2f73e1f4732ede6015c172968dcda14f3f11e57418ef97f841fc27268239495b",
+        "status": "APPLICABLE_GUARD_APPLIED",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Apply color identity guard to dark navy and green",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-GLOBAL-TYPE-001",
+        "rule_semantic_sha256": "a15bbba15635aa873c45e9f8153581a26fab17c91b5554c96bab20512d613c0c",
+        "status": "APPLICABLE_GUARD_APPLIED",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Prevent global type-scale inference",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-SHARED-FEATURE-ROW-001",
+        "rule_semantic_sha256": "b9bbe19d7878253fcc1e4620d971698055d935d65bf53604dbc93765c8dd7a97",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "No icon-text feature row",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-CLASS-POLICY-001",
+        "rule_semantic_sha256": "199eae625302c641ed555a4ddc2dc35de34064feab3ad38ab6471bd56c04ce53",
+        "status": "APPLICABLE_GUARD_APPLIED",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Use local style while shared semantic ownership is unproven",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-FAMILY-HANDS-FREE-FEATURE-ROW-001",
+        "rule_semantic_sha256": "4970c1476bbdbea623d74153b433fc1ddc7c87143c494dd6f9d311cbc6e6ef9d",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Smart Homes title is not a Hands-Free feature row",
+        "profile_mutated": false
+      },
+      {
+        "rule_id": "PSR-FAMILY-HANDS-FREE-TYPOGRAPHY-001",
+        "rule_semantic_sha256": "3910e95803cb4a75d34b894b12e5d9ad6ea98c9eaf03d8b0efe5205feac29733",
+        "status": "NOT_APPLICABLE",
+        "evidence_refs": [
+          "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+          "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+        ],
+        "reason": "Smart Homes heading is not proven to be the Hands-Free family heading",
+        "profile_mutated": false
+      }
+    ],
+    "note": "CE evidence-bound analysis only; external runner derives authoritative applicability manifest"
+  },
+  "resolved_content_projection": {
+    "status": "RESOLVED_ITEMS_PRESENT",
+    "items": [
+      {
+        "item_id": "heading-copy-001",
+        "kind": "COPY",
+        "resolved_value_or_asset_ref": "Smart Homes Are Connected. Now They Need Intelligence.",
+        "source_locator": "owner_supplied_image:/mnt/data/sshot-2.jpg plus Owner confirmed heading role",
+        "resolved_by_stage": "TEMP_ARCHITECT",
+        "scope": "SINGLE_SECTION_HEADING",
+        "freshness_or_version": "CURRENT_CONVERSATION_2026-10-18",
+        "downstream_use": "Use as exact editable heading content; keep punctuation and reading order."
+      }
+    ]
+  },
+  "resolved_state_projection": {
+    "status": "NO_CURRENT_RESOLUTION",
+    "entries": []
+  },
+  "candidate_qualification_notice": {
+    "candidate_status": "CANDIDATE_PENDING_VALIDATION",
+    "official_emitter": "qualify_ce_handoff.py",
+    "official_status_claimed": false,
+    "external_coverage_manifest_derived": false,
+    "external_style_applicability_manifest_derived": false,
+    "cross_ru_consistency_external_computed": false,
+    "self_audit_external_registry_computed": false,
+    "completion_receipt_external_derived": false,
+    "qualification_record_self_hash_computed": false,
+    "runner_available_here": true,
+    "known_source_locator_issue": "Referenced source image /mnt/data/sshot-2.jpg not present in supplied inputs",
+    "handoff_to_builder": "NOT_QUALIFIED_DO_NOT_SEND_DIRECTLY",
+    "verified_positive_scope": "Architect lock and Style exact file hash were inspected; Elementor support is documented at version/code level only",
+    "unverified_scope": "Actual Elementor target, final visual correspondence, official runner qualification, production readiness and responsive correctness",
+    "external_runner_first_run_status": "REJECTED",
+    "source_coverage_adapter_gap": "Original Architect Handoff field structure is not recognized by bundled coverage adapter v1.2.0; independent coverage derives incompletely. No CE-side rewrite of Architect or validator is authorized.",
+    "candidate_structural_carrier_repaired": "YES; official acceptance still unavailable until upstream coverage adapter compatibility and exact source-locator recovery"
+  },
+  "external_supporting_evidence": [
+    {
+      "claim": "Classic Heading renders sanitized allowed inline HTML in one h2",
+      "url": "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+      "evidence_kind": "PUBLIC_PLUGIN_SOURCE_CODE",
+      "claim_ceiling": "VERSION_LEVEL_NOT_TARGET_RUNTIME"
+    },
+    {
+      "claim": "Editor V4 can coexist with earlier widgets",
+      "url": "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+      "evidence_kind": "OFFICIAL_PLATFORM_DOCUMENTATION",
+      "claim_ceiling": "VERSION_LEVEL_NOT_TARGET_RUNTIME"
+    },
+    {
+      "claim": "Atomic V4 inline editing lacks documented partial color mark",
+      "url": "https://elementor.com/help/inline-editing/",
+      "evidence_kind": "OFFICIAL_PLATFORM_DOCUMENTATION",
+      "claim_ceiling": "ABSENCE_OF_DOCUMENTED_CONTROL_NOT_GLOBAL_IMPOSSIBILITY"
+    },
+    {
+      "claim": "Atomic rich text typed raw angle brackets serialized as escaped text",
+      "url": "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md",
+      "evidence_kind": "PUBLIC_PLUGIN_SOURCE_DOCUMENTATION",
+      "claim_ceiling": "CURRENT_CODE_FAMILY_VERSION_SENSITIVE"
+    },
+    {
+      "claim": "V4 Heading element native controls",
+      "url": "https://elementor.com/help/heading-element/",
+      "evidence_kind": "OFFICIAL_PLATFORM_DOCUMENTATION",
+      "claim_ceiling": "NO_SUBSTRING_COLOR_PROOF"
+    }
+  ],
+  "review_units": [
+    {
+      "ru_id": "CE-RU-01",
+      "surface_id": "CE-UNMAPPED-01-TEXT_CONTENT_INTEGRITY",
+      "decision_surface": "CE-UNMAPPED-01-TEXT_CONTENT_INTEGRITY",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "text_content_integrity",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/text_content_integrity",
+      "property_owner": "HEADING_TITLE_CONTENT",
+      "implementation_mechanism": "EXACT_LOCKED_COPY",
+      "property_or_control_family": "content.text_and_order",
+      "categorical_state": "ONE_READABLE_SENTENCE",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "ARCHITECT_LOCK",
+      "verification_target": "Saved heading text, frontend accessible text",
+      "fixed_constraints": [
+        "Text exactly unchanged",
+        "Period part of green segment",
+        "One uninterrupted reading order"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "SUPPORTED",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+      ],
+      "initial_value_or_bounded_range": {
+        "copy": "Smart Homes Are Connected. Now They Need Intelligence.",
+        "base": "Smart Homes Are Connected. Now They Need ",
+        "accent": "Intelligence."
+      },
+      "unresolved_values": [],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Use exact locked copy within one heading with internal presentational span"
+    },
+    {
+      "ru_id": "CE-RU-02",
+      "surface_id": "CE-UNMAPPED-02-ONE_HEADING_PRIMITIVE",
+      "decision_surface": "CE-UNMAPPED-02-ONE_HEADING_PRIMITIVE",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "one_heading_primitive",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/one_heading_primitive",
+      "property_owner": "HEADING_WIDGET",
+      "implementation_mechanism": "CLASSIC_ELEMENTOR_HEADING_WITH_INLINE_MARKUP",
+      "property_or_control_family": "elementor.widget_and_html_semantics",
+      "categorical_state": "CLASSIC_HEADING_SINGLE_H2",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "ONE_EXISTING_PARENT_AND_ONE_HEADING_INSTANCE",
+      "verification_target": "Target saved widget type; DOM heading count; frontend",
+      "fixed_constraints": [
+        "Exactly one semantic heading element",
+        "No added decorative structural wrapper",
+        "No image title",
+        "No pair of headings",
+        "The classic widget may generate its native internal markup but CE introduces no architectural wrapper"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://elementor.com/help/heading-element/",
+        "https://elementor.com/help/inline-editing/",
+        "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+        "https://elementor.com/help/heading-widget/",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "TARGET_DEPENDENT",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://elementor.com/help/heading-element/",
+        "https://elementor.com/help/inline-editing/",
+        "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+        "https://elementor.com/help/heading-widget/",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md"
+      ],
+      "initial_value_or_bounded_range": {
+        "selected": "classic_elementor_heading_widget",
+        "reason": "V4 atomic Heading inline HTML is not reliably a parsed span; classic Heading renders filtered allowed HTML within one heading"
+      },
+      "unresolved_values": [
+        {
+          "description": "Current Target classic widget presence/role access not observed",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Adopt the legacy/classic Heading primitive, not Atomic Heading; verify its availability before Initial Build"
+    },
+    {
+      "ru_id": "CE-RU-03",
+      "surface_id": "CE-UNMAPPED-03-HEADING_LEVEL_SEMANTICS",
+      "decision_surface": "CE-UNMAPPED-03-HEADING_LEVEL_SEMANTICS",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "heading_level_semantics",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/heading_level_semantics",
+      "property_owner": "HTML_HEADING_TAG",
+      "implementation_mechanism": "HTML_H2_CONDITIONAL_PAGE_OUTLINE",
+      "property_or_control_family": "semantics.heading_level",
+      "categorical_state": "H2_WITH_ARCHITECT_REOPEN_TRIGGER",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "LOCK_WITH_PROVISIONAL_OUTLINE",
+      "verification_target": "Rendered DOM page outline and heading hierarchy",
+      "fixed_constraints": [
+        "One real heading, not styled div",
+        "Actual page outline outranks H2 initial assumption",
+        "Never pick a different heading level solely for visual size"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://elementor.com/help/heading-widget/"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "NOT_PROVEN",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://elementor.com/help/heading-widget/"
+      ],
+      "initial_value_or_bounded_range": {
+        "initial_tag": "h2",
+        "allowed_change_owner": "ARCHITECT_ON_MATERIAL_CONTRADICTION"
+      },
+      "unresolved_values": [
+        {
+          "description": "Current page outline not supplied",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Use provisional H2; if page outline contradicts, report to Architect only for tag-dimension correction"
+    },
+    {
+      "ru_id": "CE-RU-04",
+      "surface_id": "CE-UNMAPPED-04-INLINE_ACCENT_REPRESENTATION",
+      "decision_surface": "CE-UNMAPPED-04-INLINE_ACCENT_REPRESENTATION",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "inline_accent_representation",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/inline_accent_representation",
+      "property_owner": "INLINE_SPAN_CHILD_OF_HEADING",
+      "implementation_mechanism": "SEMANTICALLY_NEUTRAL_SPAN_INSIDE_CLASSIC_HEADING",
+      "property_or_control_family": "html.inline_span",
+      "categorical_state": "ONE_PRESENTATIONAL_SPAN",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "HEADING_LOCAL_SUBSTRING",
+      "verification_target": "Sanitized saved heading source; DOM single heading with child span; exact textContent",
+      "fixed_constraints": [
+        "Span inside the heading not separate heading or link",
+        "No text duplication",
+        "No color outside Intelligence.",
+        "No invalid placeholder must be left in saved/published source"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "https://elementor.com/help/heading-widget/"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "TARGET_DEPENDENT",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "https://elementor.com/help/heading-widget/"
+      ],
+      "initial_value_or_bounded_range": {
+        "markup_model": "Smart Homes Are Connected. Now They Need <span style=\"color: [ROLE_MATCHED_GREEN];\">Intelligence.</span>",
+        "placeholder_is_not_executable_css": true,
+        "accent_text": "Intelligence."
+      },
+      "unresolved_values": [
+        {
+          "description": "Actual role-matched green value and target filtered-markup persistence unverified",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Render one presentational inline span on Intelligence.; resolve actual role-matched color before live publication"
+    },
+    {
+      "ru_id": "CE-RU-05",
+      "surface_id": "CE-UNMAPPED-05-HEADING_BASE_COLOR",
+      "decision_surface": "CE-UNMAPPED-05-HEADING_BASE_COLOR",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "heading_base_color",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/heading_base_color",
+      "property_owner": "HEADING_BASE_TEXT_STYLE",
+      "implementation_mechanism": "ONE_HEADING_LOCAL_BASE_COLOR",
+      "property_or_control_family": "typography.color",
+      "categorical_state": "DARK_NAVY_ROLE_COLOR",
+      "unit_family": "SRGB_HEX",
+      "style_or_project_binding": "LOCAL_HEADING_OR_INHERITED_ROLE_MATCH",
+      "verification_target": "Computed color and contrast on frontend",
+      "fixed_constraints": [
+        "Base text remains dark navy",
+        "No invented color token",
+        "Do not change unrelated headings",
+        "Contrast must be verified against Owner-managed background"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "NOT_PROVEN",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "initial_value_or_bounded_range": {
+        "initial": "INHERIT_ONLY_IF_SEMANTICALLY_ROLE_MATCHED",
+        "target_match": "REFERENCE_DARK_NAVY",
+        "numeric_color": "UNRESOLVED"
+      },
+      "unresolved_values": [
+        {
+          "description": "Exact reference navy, site token identity and background color unavailable",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Bind base text color to this heading scope and verify contrast"
+    },
+    {
+      "ru_id": "CE-RU-06",
+      "surface_id": "CE-UNMAPPED-06-INLINE_ACCENT_COLOR",
+      "decision_surface": "CE-UNMAPPED-06-INLINE_ACCENT_COLOR",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "inline_accent_color",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/inline_accent_color",
+      "property_owner": "ACCENT_SPAN_INLINE_COLOR_PROPERTY",
+      "implementation_mechanism": "INLINE_SPAN_CSS_COLOR",
+      "property_or_control_family": "css.color",
+      "categorical_state": "GREEN_ACCENT_ONLY",
+      "unit_family": "SRGB_HEX",
+      "style_or_project_binding": "LOCAL_SPAN_STYLE",
+      "verification_target": "DOM computed green on span; frontend visual; WCAG appropriate to rendered type size",
+      "fixed_constraints": [
+        "Green applies to full Intelligence. including the period",
+        "No nearby-green guess becomes project token",
+        "Contrast against actual background required"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "NOT_PROVEN",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "initial_value_or_bounded_range": {
+        "value_kind": "REFERENCE_GREEN_ROLE",
+        "exact_hex": "UNRESOLVED",
+        "fixed_selector_scope": "only the inline span"
+      },
+      "unresolved_values": [
+        {
+          "description": "Exact green unavailable because original reference bytes absent and target tokens unknown",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Set the span color from observed role-matched evidence, not invented nearby green"
+    },
+    {
+      "ru_id": "CE-RU-07",
+      "surface_id": "CE-UNMAPPED-07-TYPOGRAPHIC_BASIS",
+      "decision_surface": "CE-UNMAPPED-07-TYPOGRAPHIC_BASIS",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "typographic_basis",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/typographic_basis",
+      "property_owner": "HEADING_LOCAL_TYPOGRAPHY",
+      "implementation_mechanism": "SINGLE_HEADING_TYPOGRAPHY_PROPERTY_OWNER",
+      "property_or_control_family": "typography.font_family_weight_size_line_height",
+      "categorical_state": "ROLE_MATCHED_OR_INHERITED_UNTIL_EVIDENCE",
+      "unit_family": "INHERIT_FOR_UNPROVEN_VALUES",
+      "style_or_project_binding": "LOCAL_HEADING_STYLE",
+      "verification_target": "Computed font properties and target visual relation",
+      "fixed_constraints": [
+        "No invented global typography scale",
+        "No cross-unit equivalence without computed root font size",
+        "No responsive font scale selected"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "NOT_PROVEN",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "initial_value_or_bounded_range": {
+        "initial": "INHERIT_FOR_FONT_FAMILY_WEIGHT_SIZE_LINE_HEIGHT_IF_UNPROVEN",
+        "reference_goal": "desktop two-line text with compatible type role",
+        "global_scale": "FORBIDDEN_UNPROVEN"
+      },
+      "unresolved_values": [
+        {
+          "description": "Exact family/weight/size/line-height unmeasured",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Retain current inherited typography for unproven values; calibrate only when image/target evidence provides a bounded basis"
+    },
+    {
+      "ru_id": "CE-RU-08",
+      "surface_id": "CE-UNMAPPED-08-NORMAL_FLOW_ALIGNMENT",
+      "decision_surface": "CE-UNMAPPED-08-NORMAL_FLOW_ALIGNMENT",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "normal_flow_alignment",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/normal_flow_alignment",
+      "property_owner": "HEADING_LAYOUT",
+      "implementation_mechanism": "NORMAL_FLOW_INLINE_START_LTR",
+      "property_or_control_family": "layout.display_direction_alignment",
+      "categorical_state": "LEFT_LTR_NORMAL_FLOW",
+      "unit_family": "AUTO",
+      "style_or_project_binding": "LOCAL_HEADING_OR_INHERIT",
+      "verification_target": "Frontend text alignment and uncropped natural flow",
+      "fixed_constraints": [
+        "No absolute positioning/overlay",
+        "No architecture wrapper",
+        "Parent section outside CE heading work"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "SUPPORTED",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+      ],
+      "initial_value_or_bounded_range": {
+        "display": "normal flow",
+        "direction": "LTR",
+        "text_align": "left",
+        "block_size": "auto"
+      },
+      "unresolved_values": [
+        {
+          "description": "Actual parent inherited direction and width not observed",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Keep heading in existing parent with ordinary flow and left LTR alignment"
+    },
+    {
+      "ru_id": "CE-RU-09",
+      "surface_id": "CE-UNMAPPED-09-DESKTOP_LINE_WRAP_AND_WIDTH",
+      "decision_surface": "CE-UNMAPPED-09-DESKTOP_LINE_WRAP_AND_WIDTH",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "desktop_line_wrap_and_width",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/desktop_line_wrap_and_width",
+      "property_owner": "HEADING_MAX_INLINE_SIZE",
+      "implementation_mechanism": "NATURAL_WRAP_WITH_OPTIONAL_HEADING_LOCAL_INLINE_SIZE_CAP",
+      "property_or_control_family": "sizing.max_inline_size_and_wrap",
+      "categorical_state": "SOFT_DESKTOP_LINE_WRAP",
+      "unit_family": "PX_MEASURED_COMPUTED_FONT",
+      "style_or_project_binding": "LOCAL_HEADING_ONLY",
+      "verification_target": "Desktop frontend text reflow line count, clipping and parent containment",
+      "fixed_constraints": [
+        "No forced br",
+        "No fixed block height",
+        "No overflow, clipping or mobile break lock",
+        "No parent layout changes",
+        "Desktop only visual intent; Responsive role owns final adaptations"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "TARGET_DEPENDENT",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#resolved_content_projection.items[heading-copy-001]"
+      ],
+      "initial_value_or_bounded_range": {
+        "base": "AUTO_FROM_EXISTING_PARENT",
+        "cap_eligibility": "ONLY_WHEN_NATURAL_PARENT_WRAP_DOES_NOT_MATCH_DESKTOP_REFERENCE",
+        "calibration_boundary": "max(width(first intended line),width(second intended line)) <= cap < width(first intended line + next word) as measured at the same computed font; never greater than available parent width",
+        "forced_br": false
+      },
+      "unresolved_values": [
+        {
+          "description": "Available parent width and computed text widths not observed; max-inline-size control exposure unknown",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Prefer natural wrap; any cap stays heading-local, magnitude only within a measured desktop range"
+    },
+    {
+      "ru_id": "CE-RU-10",
+      "surface_id": "CE-UNMAPPED-10-STYLE_OWNERSHIP_AND_REUSE",
+      "decision_surface": "CE-UNMAPPED-10-STYLE_OWNERSHIP_AND_REUSE",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "style_ownership_and_reuse",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/style_ownership_and_reuse",
+      "property_owner": "LOCAL_SCOPE_STYLE_POLICY",
+      "implementation_mechanism": "LOCAL_SCOPE_NO_UNPROVEN_GLOBAL_CLASS_OR_VARIABLE",
+      "property_or_control_family": "style.class_variable_local_ownership",
+      "categorical_state": "LOCAL_ONLY_UNTIL_OWNER_PROOF",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "ONE_HEADING_SCOPE",
+      "verification_target": "Current class ownership and unrelated instance regression check",
+      "fixed_constraints": [
+        "No global Profile edits",
+        "Reuse shared style only after verified semantic ownership; no automatic reuse",
+        "No accidental cross-heading color changes"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "SUPPORTED",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock",
+        "profile:EV4-PSP-NUURO-20260731@1.0.1-r2#sha256:fa96ab07f86daf23a518376f7b17d54bf69f11de6d4b77c6027b3b0529d4bfcb"
+      ],
+      "initial_value_or_bounded_range": {
+        "shared_class_creation": false,
+        "global_variable_creation": false,
+        "local_base_style": true,
+        "local_accent_span_style": true
+      },
+      "unresolved_values": [
+        {
+          "description": "Existing current target classes/variables not inventoried",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Keep styling local; do not introduce global styles or classes on weak color similarity"
+    },
+    {
+      "ru_id": "CE-RU-11",
+      "surface_id": "CE-UNMAPPED-11-ACCESSIBILITY_AND_NONINTERACTION",
+      "decision_surface": "CE-UNMAPPED-11-ACCESSIBILITY_AND_NONINTERACTION",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "accessibility_and_noninteraction",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/accessibility_and_noninteraction",
+      "property_owner": "SEMANTIC_HEADING_WITH_PRESENTATIONAL_SPAN",
+      "implementation_mechanism": "NATIVE_HEADING_ACCESSIBLE_NAME",
+      "property_or_control_family": "accessibility.heading_text",
+      "categorical_state": "NATIVE_READABLE_HEADING",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "NATIVE_HTML",
+      "verification_target": "DOM title textContent, heading level, reading order, actual contrast",
+      "fixed_constraints": [
+        "Noninteractive heading",
+        "Logical reading order exact",
+        "No aria-label workaround that duplicates/changes text",
+        "Verify contrast from final computed colors"
+      ],
+      "evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "NOT_PROVEN",
+      "capability_evidence_refs": [
+        "architect:EV4-ARCH-SECTION-HEADING-SMART-HOMES-20261018-01#architecture_lock"
+      ],
+      "initial_value_or_bounded_range": {
+        "accessible_name": "Smart Homes Are Connected. Now They Need Intelligence.",
+        "link": false,
+        "button": false,
+        "decorative_span": "no additional announced label"
+      },
+      "unresolved_values": [
+        {
+          "description": "Current page outline and rendered contrast unavailable",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Verify one accessible real heading whose text reads exactly once"
+    },
+    {
+      "ru_id": "CE-RU-12",
+      "surface_id": "CE-UNMAPPED-12-CONSTRUCTABILITY_AND_VERIFICATION_BOUNDARY",
+      "decision_surface": "CE-UNMAPPED-12-CONSTRUCTABILITY_AND_VERIFICATION_BOUNDARY",
+      "active": true,
+      "superseded": false,
+      "locked_responsibility": "constructability_and_verification_boundary",
+      "target_node": "SECTION_HEADING",
+      "ownership_scope": "SECTION_HEADING/constructability_and_verification_boundary",
+      "property_owner": "TARGET_CAPABILITY_OWNERSHIP",
+      "implementation_mechanism": "TARGET_ENTRY_CHECK_WITH_SCOPED_STOP",
+      "property_or_control_family": "capability_and_verification",
+      "categorical_state": "SUPPORTED_AT_VERSION_LEVEL_TARGET_NOT_OBSERVED",
+      "unit_family": "NOT_APPLICABLE",
+      "style_or_project_binding": "CURRENT_TARGET_OBSERVATION",
+      "verification_target": "Saved heading source, current element/role access, frontend, accessibility",
+      "fixed_constraints": [
+        "No unsupported claim of tested current-site controls",
+        "No Builder mechanism substitution on failure",
+        "No UI click path/locator in CE",
+        "No production readiness claim"
+      ],
+      "evidence_refs": [
+        "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md",
+        "https://elementor.com/help/heading-element/"
+      ],
+      "dependencies": [],
+      "calibration_eligibility": {
+        "eligible": false,
+        "rationale": "No category, owner, unit or mechanism is delegated; only measured, bounded magnitudes can be adjusted under locked strategy."
+      },
+      "capability_status": "TARGET_DEPENDENT",
+      "capability_evidence_refs": [
+        "https://elementor.com/help/get-started-with-the-elementor-editor-v4/",
+        "https://github.com/elementor/elementor/blob/main/includes/widgets/heading.php",
+        "https://github.com/elementor/elementor/blob/main/docs/atomic-builder/atomic-widgets/authoring-widgets.md",
+        "https://elementor.com/help/heading-element/"
+      ],
+      "initial_value_or_bounded_range": {
+        "version_basis": "classic Heading accepts sanitized inline HTML; v4 and classic may coexist",
+        "target_test": "saved classic Heading with allowed span survives sanitization and published DOM",
+        "stop_condition": "if widget or markup unavailable, return to CE; do not split semantic heading"
+      },
+      "unresolved_values": [
+        {
+          "description": "Target site/version/user role/permissions not provided",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        },
+        {
+          "description": "Target sanitization/render not tested",
+          "evidence_required": true,
+          "blocks_initial_build": false,
+          "blocks_production_closure": true
+        }
+      ],
+      "closure_state": "CLOSED",
+      "strategy_closed": true,
+      "verification_status": "NOT_EXECUTED_OR_TESTED_ON_CURRENT_TARGET",
+      "contradiction_route": "RETURN_TO_ARCHITECT_IF_UPSTREAM_CONTRADICTION_OTHERWISE_BLOCK_AFFECTED_RU",
+      "builder_execution_seed_effect": "Before proceeding with the selected mechanism, verify target capability; failure returns to CE rather than delegating strategy"
+    }
+  ],
+  "candidate_status": "CANDIDATE_PENDING_VALIDATION",
+  "remaining_builder_strategy_decisions": [],
+  "default_output_mode": "FINAL_HANDOFF_ONLY",
+  "hide_intermediate_presentation": true,
+  "skip_intermediate_execution": false,
+  "ephemeral_canonical_set": true,
+  "persistent_ledger": false,
+  "requires_repeated_continue": false,
+  "continue_semantics": "RESUME_AND_COMPLETE_ALL_REMAINING_SAFE_NON_BLOCKED_CE_EXECUTION",
+  "declared_actions": [],
+  "detail_mode": {
+    "advances_work": false,
+    "changes_decisions": false,
+    "exposes_chain_of_thought": false,
+    "ru_ids": [
+      "CE-RU-01",
+      "CE-RU-02",
+      "CE-RU-03",
+      "CE-RU-04",
+      "CE-RU-05",
+      "CE-RU-06",
+      "CE-RU-07",
+      "CE-RU-08",
+      "CE-RU-09",
+      "CE-RU-10",
+      "CE-RU-11",
+      "CE-RU-12"
+    ]
+  },
+  "requested_claim_level": "INITIAL_BUILD",
+  "builder_readiness": "NOT_OFFICIALLY_QUALIFIED",
+  "scoped_blockers": [],
+  "forbidden_work": [
+    "Do not split the sentence into multiple semantic headings.",
+    "Do not rasterize the title into an image as a substitute for live text.",
+    "Do not add an architecture-only decorative wrapper.",
+    "Do not silently change source text, sequence, emphasis scope or heading responsibility.",
+    "Do not expand scope to background or full Section layout.",
+    "Do not hard-lock desktop line break across unsupported mobile widths.",
+    "Do not let downstream stages silently change architecture_lock.",
+    "No Elementor click paths or Builder UI mappings in CE",
+    "No Responsive route selection or production readiness claim"
+  ],
+  "not_applicable": []
+}
