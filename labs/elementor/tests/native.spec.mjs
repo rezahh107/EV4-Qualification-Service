@@ -218,6 +218,24 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
  // Selection re-renders the control asynchronously. A missing/unready control
  // is a harness prerequisite failure, not a qualified product mismatch.
  await expect(reopenedInput).toBeVisible({timeout:15000});
+ // Native 4.3.5: selection manager opens panel/editor with a model-backed
+ // EditorView; data controls read their value from container.settings.
+ // Read only once the selected and panel-bound widget IDs match, and the
+ // visible Title control agrees with THAT model (never with expected text).
+ // A timeout here is a harness prerequisite, not a product assertion.
+ await expect.poll(async()=>page.evaluate(id=>{
+  const editor=window.elementor;
+  const selected=editor?.selection?.getElements?.()??[];
+  const panel=editor?.getPanelView?.();
+  const view=panel?.getCurrentPageView?.();
+  const edited=view?.getOption?.('editedElementView')?.getContainer?.();
+  const title=document.querySelector('.elementor-control-title input, .elementor-control-title textarea');
+  return selected.length===1&&selected[0].id===id&&
+   panel?.getCurrentPageName?.()==='editor'&&edited?.id===id&&
+   title?.getClientRects().length>0&&
+   typeof edited?.settings?.get?.('title')==='string'&&
+   title.value===edited.settings.get('title');
+ },legacyId),{timeout:15000}).toBe(true);
  const reopenedValue=await reopenedInput.inputValue();
  const afterPanel=await panelIdentity();
  fs.mkdirSync('./artifacts',{recursive:true});
