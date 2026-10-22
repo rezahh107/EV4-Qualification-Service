@@ -201,9 +201,11 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
  const panelIdentity=()=>page.evaluate(()=>{
   const panel=window.elementor?.getPanelView?.();
   const view=panel?.getCurrentPageView?.();
+  const edited=view?.getOption?.('editedElementView')?.getContainer?.();
   return {selectedIds:window.elementor?.selection?.getElements?.().map(c=>c.id)??[],
    page:panel?.getCurrentPageName?.()??null,
-   editedId:view?.getOption?.('editedElementView')?.getContainer?.()?.id??null};
+   editedId:edited?.id??null,
+   panelModelTitle:edited?.settings?.get?.('title')??null};
  });
  await page.evaluate(id=>{
   window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
