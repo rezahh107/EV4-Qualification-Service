@@ -294,3 +294,57 @@ test('visible-but-stale Title races through visibility-only acquisition',async({
   // Waiting for the desired text is only a controlled-test discriminator;
   // it is NOT an admissible production readiness signal.
 });
+
+
+test('selection and panel identity alone do not make a visible stale Title ready',async({page})=>{
+  // Controlled panel stand-in only; not proof about native Elementor timing.
+  await page.setContent('<div class="elementor-control-title"><input value="Previous widget"></div>');
+  await page.evaluate(()=>{
+    const old={id:'old',settings:{get:()=> 'Previous widget'}};
+    window._testState={selected:old,panel:old,page:'editor'};
+    window.elementor={
+      selection:{getElements:()=>[window._testState.selected]},
+      getPanelView:()=>({
+        getCurrentPageName:()=>window._testState.page,
+        getCurrentPageView:()=>({
+          getOption:()=>({getContainer:()=>window._testState.panel})
+        })
+      })
+    };
+  });
+  const readiness=async()=>page.evaluate(target=>{
+    const panel=window.elementor.getPanelView();
+    const selected=window.elementor.selection.getElements();
+    const edited=panel.getCurrentPageView().getOption('editedElementView').getContainer();
+    const input=document.querySelector('.elementor-control-title input');
+    return selected.length===1&&selected[0].id===target&&
+      panel.getCurrentPageName()==='editor'&&edited.id===target&&
+      input?.getClientRects().length>0&&input.value===edited.settings.get('title');
+  },'target');
+  await page.evaluate(()=>{
+    const updated={id:'target',settings:{get:()=> 'New widget'}};
+    window._testState.selected=updated;
+    window._testState.panel=updated;
+  });
+  const input=page.locator(partialSelector).first();
+  await expect(input).toBeVisible();
+  assert.equal(await input.inputValue(),'Previous widget');
+  assert.equal(await readiness(),false,'identity-only would read stale control');
+  await page.evaluate(()=>{setTimeout(()=>{
+    document.querySelector('.elementor-control-title input').value='New widget';
+  },180)});
+  await expect.poll(readiness,{timeout:2000}).toBe(true);
+  assert.equal(await input.inputValue(),'New widget');
+  // When native model and control agree on a genuinely incorrect value, the
+  // acquisition must complete; the product assertion still owns the failure.
+  await page.evaluate(()=>{
+    const wrong={id:'target',settings:{get:()=> 'Wrong saved widget title'}};
+    window._testState.selected=wrong;window._testState.panel=wrong;
+    document.querySelector('.elementor-control-title input').value='Wrong saved widget title';
+  });
+  assert.equal(await readiness(),true);
+  const wrong=await input.inputValue();
+  assert.notEqual(wrong,'Expected title');
+  assert.throws(()=>expect(wrong).toBe('Expected title'),
+    e=>e?.matcherResult?.pass===false);
+});
