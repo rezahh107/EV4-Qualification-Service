@@ -213,8 +213,16 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
    const count=await heading.count();
    const box=count?await heading.first().boundingBox():null;
    const pageWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
+   const accent=count?await heading.first().evaluate(node=>{
+    const span=node.querySelector('span');
+    if(!span)return {text:null,color:null,visible:false,width:null,height:null};
+    const bounds=span.getBoundingClientRect();
+    return {text:span.textContent,color:getComputedStyle(span).color,
+     visible:span.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}),
+     width:bounds.width,height:bounds.height};
+   }):{text:null,color:null,visible:false,width:null,height:null};
    responsive.push({width,pageWidth,left:box?.x??null,
-    right:box?box.x+box.width:null,height:box?.height??null});
+    right:box?box.x+box.width:null,height:box?.height??null,accent});
   }
   await page.setViewportSize({width:1440,height:900});
   await page.goto('/?page_id='+partialPageId);
@@ -264,6 +272,11 @@ test('[D:native-partial-text-colors] native Atomic investigation and legacy Head
    expect(width.left).toBeGreaterThanOrEqual(-1);
    expect(width.right).toBeLessThanOrEqual(width.width+1);
    expect(width.height).toBeGreaterThan(0);
+   expect(width.accent.text).toBe(snapshot.expected.accented);
+   expect(width.accent.color).toBe(snapshot.expected.accentColor);
+   expect(width.accent.visible).toBe(true);
+   expect(width.accent.width).toBeGreaterThan(0);
+   expect(width.accent.height).toBeGreaterThan(0);
   }
   expect(snapshot.responsive[0].height).toBeGreaterThan(snapshot.responsive[3].height);
  });
