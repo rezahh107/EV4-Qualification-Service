@@ -151,7 +151,8 @@ test('actual D predicate rejects left-clipped geometry despite passing right and
       accentText:accent,spanCount:1,directChildCount:2,childElements:1,
       accentColor:color,ordinaryColor:'rgb(110, 193, 228)'},
     responsive:[320,390,768,1440].map((width,index)=>({
-      width,pageWidth:width,left:0,right:width-1,height:[128,96,64,32][index]
+      width,pageWidth:width,left:0,right:width-1,height:[128,96,64,32][index],
+      accent:{text:accent,color,visible:true,width:90,height:22}
     })),
     expected:{fullText:ordinary+accent,ordinary,accented:accent,
       accentColor:color,authoredMarkup:title}
@@ -168,4 +169,128 @@ test('actual D predicate rejects left-clipped geometry despite passing right and
   assert.ok(clipped.responsive[0].height>0);
   assert.throws(()=>predicate(clipped),error=>error?.matcherResult?.pass===false,
     'the *actual* product predicate must reject left clipping');
+  for(const [name,mutate] of Object.entries({
+    'mobile missing accent': r=>{r.accent={text:null,color:null,visible:false,width:null,height:null};},
+    'mobile wrong color': r=>{r.accent.color='rgb(0, 0, 0)';},
+    'mobile wrong substring': r=>{r.accent.text='Intelligence';},
+    'mobile invisible with nonzero geometry': r=>{r.accent.visible=false;},
+    'mobile zero-width': r=>{r.accent.width=0;},
+  })){
+    const candidate=structuredClone(snapshot);
+    mutate(candidate.responsive[0]);
+    assert.throws(()=>predicate(candidate),error=>error?.matcherResult?.pass===false,
+      'repaired D predicate rejects '+name);
+  }
+});
+
+
+test('real CSS mobile-only hidden accent cannot qualify through the actual D predicate', async ({page}) => {
+  // Browser DOM CSS evidence from a controlled fixture, not native Elementor.
+  // Extract the *actual* D per-viewport evaluate callback from reviewed source.
+  const source=fs.readFileSync(new URL('../tests/native.spec.mjs', import.meta.url),'utf8');
+  const syntax=parse(source,{ecmaVersion:2025,sourceType:'module'});
+  const d=syntax.body.find(node=>node.type==='ExpressionStatement' &&
+    node.expression?.callee?.name==='test' &&
+    node.expression.arguments[0]?.value?.startsWith('[D:native-partial-text-colors]'));
+  assert.ok(d);
+  const evaluations=[],assertions=[];
+  function walk(node) {
+    if(!node||typeof node!=='object')return;
+    if(node.type==='CallExpression'&&node.callee?.type==='MemberExpression'&&
+       node.callee.property?.name==='evaluate'&&node.arguments[0]?.type==='ArrowFunctionExpression'){
+      evaluations.push(node.arguments[0]);
+    }
+    if(node.type==='CallExpression'&&node.callee?.name==='productAssertion'&&
+       node.arguments[0]?.value===partialIdentity)assertions.push(node.arguments[2]);
+    for(const [key,value] of Object.entries(node)){
+      if(['start','end','raw','loc','range'].includes(key))continue;
+      if(Array.isArray(value))value.forEach(walk);
+      else if(value&&typeof value==='object')walk(value);
+    }
+  }
+  walk(d.expression.arguments[1].body);
+  const realAccentCallbacks=evaluations.filter(n=>
+    source.slice(n.start,n.end).includes('checkVisibility('));
+  assert.equal(realAccentCallbacks.length,1);
+  assert.equal(assertions.length,1);
+  const collect=runInNewContext('('+source.slice(realAccentCallbacks[0].start,
+    realAccentCallbacks[0].end)+')');
+  const predicate=runInNewContext('('+source.slice(assertions[0].start,
+    assertions[0].end)+')',{expect});
+  const ordinary='Smart Homes Are Connected. Now They Need ';
+  const accent='Intelligence.';
+  const accentColor='rgb(180, 35, 78)';
+  const markup=ordinary+'<span style="color: #b4234e;">'+accent+'</span>';
+  const base={
+    atomic:{widgetType:'e-heading',selection:accent,qualification:'NOT_PROVEN'},
+    legacy:{widgetType:'heading',authoredVia:'native-title-control',
+      editorReopened:1,editorTitle:markup},
+    semanticHeadings:1,accessibleHeadings:1,
+    published:{tag:'H2',text:ordinary+accent,ordinaryText:ordinary,
+      accentText:accent,spanCount:1,directChildCount:2,childElements:1,
+      accentColor,ordinaryColor:'rgb(110, 193, 228)'},
+    expected:{fullText:ordinary+accent,ordinary,accented:accent,
+      accentColor,authoredMarkup:markup}
+  };
+  await page.setContent('<style>body{margin:0}h2{box-sizing:border-box;width:calc(100% - 20px);max-width:1140px;margin:0 auto;font:32px/1.3 Arial;color:rgb(110,193,228)}</style>'+
+    '<h2>'+markup+'</h2>');
+  async function record() {
+    const responsive=[];
+    for(const width of [320,390,768,1440]){
+      await page.setViewportSize({width,height:900});
+      const heading=page.locator('h2');
+      const box=await heading.boundingBox();
+      responsive.push({width,pageWidth:await page.evaluate(()=>document.documentElement.scrollWidth),
+        left:box.x,right:box.x+box.width,height:box.height,
+        accent:await heading.evaluate(collect)});
+    }
+    return {...base,responsive};
+  }
+  const clean=await record();
+  assert.doesNotThrow(()=>predicate(clean),'true browser-observed visible accent');
+  const style=await page.addStyleTag({content:'@media(max-width:400px){h2 span{display:none}}'});
+  const hidden=await record();
+  assert.equal(hidden.responsive[0].accent.visible,false);
+  assert.equal(hidden.responsive[1].accent.visible,false);
+  assert.equal(hidden.responsive[2].accent.visible,true);
+  assert.equal(hidden.responsive[3].accent.visible,true);
+  for(const item of hidden.responsive){
+    assert.ok(item.left>=-1&&item.right<=item.width+1);
+    assert.ok(item.pageWidth<=item.width+1);
+    assert.ok(item.height>0);
+  }
+  assert.ok(hidden.responsive[0].height>hidden.responsive[3].height);
+  assert.throws(()=>predicate(hidden),e=>e?.matcherResult?.pass===false,
+    'display:none only on mobile cannot qualify');
+  await style.evaluate(node=>node.textContent='@media(max-width:400px){h2 span{visibility:hidden}}');
+  const hiddenVisibility=await record();
+  assert.equal(hiddenVisibility.responsive[0].accent.visible,false);
+  assert.ok(hiddenVisibility.responsive[0].accent.width>0);
+  assert.equal(hiddenVisibility.responsive[0].accent.color,accentColor);
+  assert.throws(()=>predicate(hiddenVisibility),e=>e?.matcherResult?.pass===false,
+    'visibility:hidden with correct color and nonzero geometry cannot qualify');
+  await style.evaluate(node=>node.textContent='@media(max-width:400px){h2 span{opacity:0}}');
+  const hiddenOpacity=await record();
+  assert.equal(hiddenOpacity.responsive[0].accent.visible,false);
+  assert.throws(()=>predicate(hiddenOpacity),e=>e?.matcherResult?.pass===false,
+    'opacity:0 with correct color and geometry cannot qualify');
+});
+
+test('visible-but-stale Title races through visibility-only acquisition',async({page})=>{
+  // Controlled mock: never infer a defect in real native Elementor from this.
+  await page.setContent('<div class="elementor-control-title"><input value="Previous widget value"></div>');
+  const title=page.locator(partialSelector).first();
+  await page.evaluate(()=>{
+    setTimeout(()=>{
+      document.querySelector('.elementor-control-title input').value='New selected widget value';
+    },350);
+  });
+  await expect(title).toBeVisible({timeout:1500});
+  const premature=await title.inputValue();
+  assert.equal(premature,'Previous widget value',
+    'visibility-only readiness samples old value despite visible control');
+  await expect(title).toHaveValue('New selected widget value',{timeout:2500});
+  assert.equal(await title.inputValue(),'New selected widget value');
+  // Waiting for the desired text is only a controlled-test discriminator;
+  // it is NOT an admissible production readiness signal.
 });
