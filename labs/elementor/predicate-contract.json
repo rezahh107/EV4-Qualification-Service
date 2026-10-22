@@ -17,7 +17,7 @@
     "M:native-editor-create-reopen": "f3be1227ea5723d96eef6593518f7713a546644a93a7283f44bff760a49e1233",
     "N:atomic-and-legacy-coexist": "c2f9c62f55c2748e0a0aeff7d9efa65170b22fc44f946bda383caba6118ae056",
     "O:installed-runtime-browser": "b26863deee7ecdc2281605d1d122e654e5bedbc4b666a8a014e838da3cc2f175",
-    "D:native-partial-text-colors": "21e7f185084c99d5bc222e608e22f4b3f889ef7d1ba1839611108f615c5d015d"
+    "D:native-partial-text-colors": "ef82ddcf52fd42ab95e203e0ceca40f2dfcbf2e3c190b42fc6deb9ac258a9180"
   },
   "scenario_source": {
     "A:native-duplicate-delete": "338eee5c0a9fe61052bc79d48e15f47bd283e4fa091d8237ad822cb442ba1592",
@@ -35,6 +35,6 @@
     "M:native-editor-create-reopen": "41a0eb35932c44bfdf611c81791c627e062f2a1ab4ca5badddf2a6760cac6615",
     "N:atomic-and-legacy-coexist": "1fcceb7005e232c8939979b6f46eeb8f9e59bb4687abfc7298e2c6c8a7f5194a",
     "O:installed-runtime-browser": "3b397c70f25242b06fb9c2508348f4f8232d1a71a32ef8ec53f0880fcd82aafc",
-    "D:native-partial-text-colors": "2d617474e4eff0e29b42b5101a26a7f8d3e9db3ca43566b4f1aa60f0ee73ce56"
+    "D:native-partial-text-colors": "08dd5bcd0aca7fdd034ef290a9aecfedf59cb94deaacd574a8d82450b0bdb5df"
   }
 }
