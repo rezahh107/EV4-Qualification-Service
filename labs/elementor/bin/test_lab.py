@@ -621,7 +621,7 @@ class LabTests(unittest.TestCase):
                         ):
                             lab.validate_qualification_coverage()
                 (root / 'tests/native.spec.mjs').write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
 
     def test_provenance_gates_generic_callback_and_transport_errors(self):
         from unittest.mock import patch
@@ -699,7 +699,7 @@ class LabTests(unittest.TestCase):
                         with self.assertRaisesRegex(ValueError,'Structural source qualification failed'):
                             lab.validate_qualification_coverage()
                 (root/'tests/native.spec.mjs').write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()),15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 path=root/'tests/qualification.mjs'
                 source=path.read_text()
                 path.write_text(source.replace('PRODUCT_FAIL','PRODUCT_PASS'))
@@ -745,7 +745,7 @@ class LabTests(unittest.TestCase):
                         ):
                             lab.validate_qualification_coverage()
                 (root / 'tests/native.spec.mjs').write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 helper = root / 'tests/helpers.mjs'
                 helper.write_text(helper.read_text().replace(
                     'return {root,ids};',
@@ -773,7 +773,7 @@ class LabTests(unittest.TestCase):
             root = Path(td)
             clone(root)
             with patch.object(lab, 'ROOT', root):
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 nested = root / 'tests' / 'subfolder'
                 nested.mkdir()
                 (nested / 'forged.spec.mjs').write_text(
@@ -828,12 +828,12 @@ class LabTests(unittest.TestCase):
             configuration = root / 'playwright.config.mjs'
             configuration.write_text(original)
             with patch.object(lab, 'ROOT', root):
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 # Comments/formatting do not affect semantic AST identity.
                 configuration.write_text(original.replace(
                     "testMatch: '**/*.spec.mjs'",
                     "testMatch: /* harmless formatting */ '**/*.spec.mjs'"))
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 mutations = {
                     'testMatch_wider': original.replace(
                         "'**/*.spec.mjs'", "'**/*.{spec,test}.mjs'"),
@@ -855,7 +855,7 @@ class LabTests(unittest.TestCase):
                                 ValueError, 'Structural source qualification failed'):
                             lab.validate_qualification_coverage()
                 configuration.write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 # A symlinked source/directory, even if targeting a real approved
                 # source, must never silently enter the authorized tree.
                 target = root / 'tests' / 'helpers.mjs'
@@ -937,9 +937,9 @@ const observe = async (_identity, _acquire) => ({
             )
             with patch.object(lab, 'ROOT', root):
                 path.write_text(original)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 path.write_text(harmless)
-                self.assertEqual(len(lab.validate_qualification_coverage()), 15)
+                self.assertEqual(len(lab.validate_qualification_coverage()), 16)
                 for name, mutation in mutations.items():
                     with self.subTest(name=name):
                         path.write_text(mutation)
@@ -947,6 +947,33 @@ const observe = async (_identity, _acquire) => ({
                             ValueError, 'Structural source qualification failed'
                         ):
                             lab.validate_qualification_coverage()
+
+    def test_native_partial_heading_topology_and_color_mutations(self):
+        ids = {'post_id':'6', 'container':'ba12345', 'heading':'bc12345',
+               'atomic_attempt':'bb12345', 'chosen_variant':'legacy',
+               'expected_markup':lab.PARTIAL_MARKUP}
+        def node(title=lab.PARTIAL_MARKUP, kind='heading'):
+            return {'id':'bc12345','elType':'widget','widgetType':kind,
+                    'settings':{'title':title},'elements':[]}
+        def doc(children):
+            return json.dumps([{'id':'ba12345','elType':'container',
+                                'elements':children}])
+        self.assertEqual(lab._inspect_partial_heading_document(
+            doc([node()]), ids)['state'],'VERIFIED')
+        for name, candidate in {
+            'wrong_color':doc([node(lab.PARTIAL_MARKUP.replace('#b4234e','#ffffff'))]),
+            'wrong_period':doc([node(lab.PARTIAL_MARKUP.replace('Intelligence.','Intelligence'))]),
+            'wrong_widget':doc([node(kind='e-heading')]),
+            'duplicate_heading':doc([node(),node()]),
+            'wrong_direct_parent':json.dumps([node()]),
+            'missing_heading':doc([]),
+            'malformed':'invalid',
+        }.items():
+            with self.subTest(case=name):
+                self.assertEqual(lab._inspect_partial_heading_document(
+                    candidate,ids)['state'],'MISMATCH')
+        self.assertEqual(lab._inspect_partial_heading_document(
+            doc([node()]),{**ids,'chosen_variant':'atomic'})['state'],'MISMATCH')
 
     def test_native_atomic_container_topology_is_unique_and_direct(self):
         """Exercise production parser; browser and storage states are separate."""
@@ -1026,6 +1053,31 @@ const observe = async (_identity, _acquire) => ({
             'fixture_post_id':'5', 'generated_element_ids':ids,
             'raw_elementor_data':native, 'post_status':'publish'
         }))
+        # The new independent page is not the canonical M fixture.
+        result['partial_heading_post_id'] = '6'
+        result['partial_heading_capability'] = {
+            'atomic_v4': 'NOT_PROVEN', 'legacy': 'VERIFIED_PASS',
+            'method': 'native-legacy-heading-title-control',
+            'qualified_identity': lab.PARTIAL_ID,
+            'storage_probe': 'VERIFIED', 'target_site': 'NOT_PROVEN'
+        }
+        partial_ids = {'post_id':'6', 'container':'ba12345',
+                       'atomic_attempt':'bb12345', 'heading':'bc12345',
+                       'chosen_variant':'legacy', 'expected_markup':lab.PARTIAL_MARKUP}
+        partial_data = json.dumps([{'id':'ba12345', 'elType':'container', 'elements':[
+            {'id':'bc12345', 'elType':'widget', 'widgetType':'heading',
+             'settings':{'title':lab.PARTIAL_MARKUP}, 'elements':[]}
+        ]}])
+        (root/'partial-heading-ids.json').write_text(json.dumps(partial_ids))
+        (root/'partial-heading-storage.json').write_text(json.dumps({
+            'post_id':'6', 'identity':partial_ids,
+            'raw_elementor_data':partial_data, 'post_status':'publish'
+        }))
+        result['partial_heading_storage_probe'] = {
+            'state':'VERIFIED', 'published':True, 'variant':'legacy',
+            'saved_title':lab.PARTIAL_MARKUP,
+            'generated_heading_id':'bc12345', 'generated_container_id':'ba12345'
+        }
         result['fixture_storage_probe'] = {
             'state':'VERIFIED', 'published':True, 'atomic_data':True,
             'generated_atomic_id':atomic, 'generated_container_id':container,
@@ -1046,6 +1098,13 @@ const observe = async (_identity, _acquire) => ({
             failure = contrast_fail and identity == lab.CI_INFORMATIONAL
             item['status'] = 'VERIFIED_FAIL' if failure else 'VERIFIED_PASS'
             observation = {'fixture_measurement': n, 'identity':identity}
+            if identity == lab.PARTIAL_ID:
+                observation = {
+                    'atomic':{'qualification':'NOT_PROVEN','selection':lab.PARTIAL_ACCENT},
+                    'legacy':{'authoredVia':'native-title-control',
+                              'editorTitle':lab.PARTIAL_MARKUP},
+                    'published':{'text':lab.PARTIAL_TEXT}
+                }
             sha = hashlib.sha256(json.dumps(
                 observation, separators=(',', ':'), ensure_ascii=False
             ).encode()).hexdigest()
@@ -1097,12 +1156,117 @@ const observe = async (_identity, _acquire) => ({
                                     'status':'unexpected' if failure else 'expected',
                                     'results':[attempt]}]})
         report = {'errors':[], 'suites':[{'specs':specs}],
-                  'stats':{'expected':14 if contrast_fail else 15,
+                  'stats':{'expected':15 if contrast_fail else 16,
                            'unexpected':1 if contrast_fail else 0,
                            'skipped':0, 'flaky':0}}
         (root/'result.json').write_text(json.dumps(result))
         (root/'playwright.json').write_text(json.dumps(report))
         return p,head,result,report
+
+    def test_ci_admission_summary_tracks_validated_roster_and_catalog_successors(self):
+        """Unit-only successors; no synthetic runtime evidence is product proof."""
+        import copy
+        import os
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            p, head, baseline, report = self._build_ci_gate_fixture(root)
+            env = {'EXPECTED_SOURCE_SHA': head, 'GITHUB_RUN_ID': 'ci-gate-test-run',
+                   'GITHUB_RUN_ATTEMPT': '1'}
+            base_catalog = lab.catalog()
+            self.assertEqual(sum(len(d['scenarios']) for d in base_catalog['domains']), 28)
+            self.assertEqual(sum(s['test'] is not None for d in base_catalog['domains']
+                                 for s in d['scenarios']), 16)
+
+            def validate(candidate, *, cat=None):
+                # Source identities are fixed in this *unit fixture*. A real
+                # successor must still pass exact-Head/source AST admission.
+                effective_catalog = cat or lab.CAT
+                with patch.object(lab, 'ART', root), patch.object(lab, 'CAT', effective_catalog), \
+                        patch.object(lab, 'test_hash', return_value=baseline['test_sha256']), \
+                        patch.dict(os.environ, env):
+                    return lab.verify_ci_acceptance(
+                        candidate, report, p, selected='all', lab_exit=2, expected=head
+                    )
+
+            base_summary = validate(baseline)
+            self.assertEqual({k: base_summary[k] for k in
+                              ('mandatory_verified', 'not_executed', 'pro_unavailable')},
+                             {'mandatory_verified': 15, 'not_executed': 11,
+                              'pro_unavailable': 1})
+            # The persisted public admission JSON must agree with its source roster,
+            # not merely the in-memory return value.
+            with patch.object(lab, 'ART', root), patch.dict(os.environ, env), \
+                    patch.object(lab, 'require_exact_source', return_value=head), \
+                    patch.object(lab, 'validate_qualification_coverage',
+                                 return_value={'unit-only': True}):
+                self.assertEqual(lab.ci_acceptance_command(p, 'all', 2, head), 0)
+            recorded = json.loads((root / 'ci-acceptance.json').read_text())
+            self.assertEqual({k: recorded[k] for k in
+                              ('mandatory_verified', 'not_executed', 'pro_unavailable')},
+                             {k: base_summary[k] for k in
+                              ('mandatory_verified', 'not_executed', 'pro_unavailable')})
+            self.assertEqual(sum(s['status']=='NOT_EXECUTED' for s in baseline['scenarios']), 11)
+            self.assertEqual(sum(s['status']=='PRO_OR_LICENSE_UNAVAILABLE'
+                                 for s in baseline['scenarios']), 1)
+
+            # The canonical roster, never manually maintained summary values,
+            # must determine the counts after an admitted catalog successor.
+            successor = copy.deepcopy(base_catalog)
+            successor['domains'][-1]['scenarios'].extend([
+                {'id': 'successor-unexecuted', 'test': None},
+                {'id': 'successor-pro-only', 'test': None, 'requires_pro': True}
+            ])
+            successor_path = root / 'successor-catalog.json'
+            successor_path.write_text(json.dumps(successor))
+            extra = [
+                {'capability': 'O', 'scenario': 'successor-unexecuted',
+                 'test_identity': None, 'status': 'NOT_EXECUTED', 'observed': None},
+                {'capability': 'O', 'scenario': 'successor-pro-only',
+                 'test_identity': None, 'status': 'PRO_OR_LICENSE_UNAVAILABLE',
+                 'observed': None}
+            ]
+
+            # A mutated catalog with the *old* evidence fingerprint is not a
+            # legitimate successor and cannot be admitted.
+            with self.assertRaisesRegex(ValueError, 'environment fingerprint'):
+                validate(baseline, cat=successor_path)
+
+            candidate = copy.deepcopy(baseline)
+            installed = dict(candidate['installed'])
+            installed.pop('atomic_editor_observed')
+            with patch.object(lab, 'ART', root), patch.object(lab, 'CAT', successor_path), \
+                    patch.object(lab, 'test_hash', return_value=baseline['test_sha256']), \
+                    patch.dict(os.environ, env):
+                for item in extra:
+                    candidate['scenarios'].append(copy.deepcopy(item))
+                candidate['environment_fingerprint'] = lab.digest({
+                    'requested': p, 'installed': installed,
+                    'test_sha256': candidate['test_sha256'],
+                    'catalog_sha256': lab.digest(lab.CAT.read_bytes())
+                })
+                revised = lab.verify_ci_acceptance(
+                    candidate, report, p, selected='all', lab_exit=2, expected=head)
+                self.assertEqual((revised['mandatory_verified'], revised['not_executed'],
+                                  revised['pro_unavailable']), (15, 12, 2))
+                self.assertEqual(len(candidate['scenarios']), 30)
+
+                mismatched = copy.deepcopy(candidate)
+                mismatched['scenarios'][-1]['scenario'] = 'wrong-identity'
+                with self.assertRaisesRegex(ValueError, 'roster identity'):
+                    lab.verify_ci_acceptance(
+                        mismatched, report, p, selected='all', lab_exit=2, expected=head)
+                invalid = copy.deepcopy(candidate)
+                invalid['scenarios'][-2]['status'] = 'VERIFIED_PASS'
+                with self.assertRaisesRegex(ValueError, 'improperly promoted'):
+                    lab.verify_ci_acceptance(
+                        invalid, report, p, selected='all', lab_exit=2, expected=head)
+                missing = copy.deepcopy(candidate)
+                missing['scenarios'].pop()
+                with self.assertRaisesRegex(ValueError, 'roster differs'):
+                    lab.verify_ci_acceptance(
+                        missing, report, p, selected='all', lab_exit=2, expected=head)
 
     def test_explicit_ci_gate_admits_only_complete_current_run_evidence(self):
         import copy
@@ -1150,6 +1314,23 @@ const observe = async (_identity, _acquire) => ({
                 rejected(result=altered)
                 altered = copy.deepcopy(positive)
                 altered['fixture_storage_probe']['state']='UNAVAILABLE'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['partial_heading_capability']['legacy']='NOT_PROVEN'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['partial_heading_storage_probe']['state']='UNAVAILABLE'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                next(x for x in altered['scenarios']
+                     if x['test_identity'] == lab.PARTIAL_ID)['status'] = 'NOT_PROVEN'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['scenarios'][next(n for n,x in enumerate(altered['scenarios'])
+                    if x['test_identity']==lab.PARTIAL_ID)]['status']='VERIFIED_FAIL'
+                rejected(result=altered)
+                altered = copy.deepcopy(positive)
+                altered['partial_heading_post_id']='wrong'
                 rejected(result=altered)
                 altered = copy.deepcopy(positive)
                 altered['installed']=None

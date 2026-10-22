@@ -57,7 +57,7 @@
         },
         {
           "id": "native-partial-text-colors",
-          "test": null
+          "test": "D:native-partial-text-colors"
         }
       ]
     },

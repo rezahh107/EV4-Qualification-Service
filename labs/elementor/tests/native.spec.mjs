@@ -119,6 +119,208 @@ test('[D:atomic-semantic-heading] atomic widget uses semantic H2',async({page})=
  });
 });
 
+
+test('[D:native-partial-text-colors] native Atomic investigation and legacy Heading authoring',async({page})=>{
+ const partialPageId=process.env.LAB_PARTIAL_PAGE_ID;
+ expect(partialPageId).toMatch(/^\d+$/);
+ const fullText='Smart Homes Are Connected. Now They Need Intelligence.';
+ const ordinary='Smart Homes Are Connected. Now They Need ';
+ const accented='Intelligence.';
+ const accentHex='#b4234e';
+ const legacyMarkup=ordinary+'<span style="color: '+accentHex+';">'+accented+'</span>';
+ await page.goto('/wp-login.php');
+ await page.locator('#user_login').fill(process.env.LAB_ADMIN_USER||'admin');
+ await page.locator('#user_pass').fill(process.env.LAB_ADMIN_PASS||'password');
+ await page.locator('#wp-submit').click();
+ await expect(page).toHaveURL(/\/wp-admin\//);
+ await page.goto('/wp-admin/post.php?post='+partialPageId+'&action=elementor');
+ const root=page.locator('#elementor-editor-wrapper-v2');
+ await expect(root).toBeVisible({timeout:60000});
+ await page.locator('.elementor-panel-loading').waitFor({state:'detached'});
+ const frame=page.frameLocator('#elementor-preview-iframe');
+ const ids=await page.evaluate(()=>{
+  if(!window.$e?.run||!window.elementor?.getContainer)
+   throw new Error('Native Elementor editor commands unavailable');
+  const create=(model,container)=>window.$e.run('document/elements/create',{model,container});
+  const container=create({elType:'container'},window.elementor.getContainer('document'));
+  const atomic=create({elType:'widget',widgetType:'e-heading'},container);
+  if(!container?.id||!atomic?.id)throw new Error('Native Atomic identity unavailable');
+  return {container:container.id,atomic:atomic.id};
+ });
+ const atomicHeading=frame.locator('[data-id="'+ids.atomic+'"] h2.e-heading-base');
+ await expect(atomicHeading).toBeVisible();
+ await atomicHeading.dblclick();
+ const atomicEditor=frame.locator('.ProseMirror[contenteditable="true"]');
+ await expect(atomicEditor).toBeVisible();
+ await atomicEditor.fill(fullText);
+ await atomicEditor.press('ControlOrMeta+End');
+ for(let i=0;i<accented.length;i++)await atomicEditor.press('Shift+ArrowLeft');
+ const atomicSelection=await atomicEditor.evaluate(node=>node.ownerDocument.getSelection()?.toString()??null);
+ const atomicToolbar=await frame.locator('[role="toolbar"] button').evaluateAll(nodes=>
+  nodes.filter(n=>n.getClientRects().length>0).map(n=>({
+   label:n.getAttribute('aria-label')||n.getAttribute('title')||n.textContent?.trim()||''
+  })));
+ // The released editor's actual selection controls are evidence. Do not assume
+ // an unobserved text-color mark exists and never inject DOM or saved data.
+ await atomicEditor.press('Escape');
+ const legacyId=await page.evaluate(atomicId=>{
+  const current=window.elementor.getContainer(atomicId);
+  if(!current)throw new Error('Native Atomic removal target missing');
+  const parent=current.parent;
+  window.$e.run('document/elements/delete',{container:current});
+  const legacy=window.$e.run('document/elements/create',{
+   model:{elType:'widget',widgetType:'heading',settings:{title:'Native title pending'}},
+   container:parent
+  });
+  if(!legacy?.id)throw new Error('Native legacy Heading identity unavailable');
+  window.$e.run('document/elements/select',{container:window.elementor.getContainer(legacy.id)});
+  return legacy.id;
+ },ids.atomic);
+ const legacyInput=page.locator('.elementor-control-title input, .elementor-control-title textarea').first();
+ await expect(legacyInput).toBeVisible({timeout:15000});
+ await legacyInput.fill(legacyMarkup);
+ await legacyInput.press('Tab');
+ const publish=root.getByRole('button',{name:/^Publish$/i}).first();
+ await expect(publish).toBeEnabled();
+ await publish.click();
+ await expect(publish).toBeDisabled({timeout:30000});
+ fs.mkdirSync('./artifacts',{recursive:true});
+ fs.writeFileSync('./artifacts/partial-heading-ids.json',JSON.stringify({
+  post_id:partialPageId,container:ids.container,atomic_attempt:ids.atomic,
+  heading:legacyId,chosen_variant:'legacy',expected_markup:legacyMarkup
+ },null,2));
+ await page.reload();
+ await expect(root).toBeVisible({timeout:60000});
+ await page.locator('.elementor-panel-loading').waitFor({state:'detached'});
+ const reopenedHeading=frame.locator('[data-id="'+legacyId+'"] .elementor-heading-title');
+ await expect(reopenedHeading).toBeVisible({timeout:15000});
+ const reopenedCount=await reopenedHeading.count();
+ // Qualify a separate widget-selection versus rendered-panel identity seam.
+ // This is diagnostic-only until native 4.3.5 runtime evidence supports a
+ // readiness gate; no production title readback behavior is changed here.
+ const panelIdentity=()=>page.evaluate(()=>{
+  const panel=window.elementor?.getPanelView?.();
+  const view=panel?.getCurrentPageView?.();
+  const edited=view?.getOption?.('editedElementView')?.getContainer?.();
+  return {selectedIds:window.elementor?.selection?.getElements?.().map(c=>c.id)??[],
+   page:panel?.getCurrentPageName?.()??null,
+   editedId:edited?.id??null,
+   panelModelTitle:edited?.settings?.get?.('title')??null};
+ });
+ await page.evaluate(id=>{
+  window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
+ },ids.container);
+ const beforePanel=await panelIdentity();
+ await page.evaluate(id=>{
+  window.$e.run('document/elements/select',{container:window.elementor.getContainer(id)});
+ },legacyId);
+ const reopenedInput=page.locator('.elementor-control-title input, .elementor-control-title textarea').first();
+ // Selection re-renders the control asynchronously. A missing/unready control
+ // is a harness prerequisite failure, not a qualified product mismatch.
+ await expect(reopenedInput).toBeVisible({timeout:15000});
+ // Native 4.3.5: selection manager opens panel/editor with a model-backed
+ // EditorView; data controls read their value from container.settings.
+ // Read only once the selected and panel-bound widget IDs match, and the
+ // visible Title control agrees with THAT model (never with expected text).
+ // A timeout here is a harness prerequisite, not a product assertion.
+ await expect.poll(async()=>page.evaluate(id=>{
+  const editor=window.elementor;
+  const selected=editor?.selection?.getElements?.()??[];
+  const panel=editor?.getPanelView?.();
+  const view=panel?.getCurrentPageView?.();
+  const edited=view?.getOption?.('editedElementView')?.getContainer?.();
+  const title=document.querySelector('.elementor-control-title input, .elementor-control-title textarea');
+  return selected.length===1&&selected[0].id===id&&
+   panel?.getCurrentPageName?.()==='editor'&&edited?.id===id&&
+   title?.getClientRects().length>0&&
+   typeof edited?.settings?.get?.('title')==='string'&&
+   title.value===edited.settings.get('title');
+ },legacyId),{timeout:15000}).toBe(true);
+ const reopenedValue=await reopenedInput.inputValue();
+ const afterPanel=await panelIdentity();
+ fs.mkdirSync('./artifacts',{recursive:true});
+ fs.writeFileSync('./artifacts/partial-heading-panel-readiness-diagnostic.json',
+  JSON.stringify({containerId:ids.container,headingId:legacyId,
+   beforePanel,afterPanel,titleValue:reopenedValue},null,2));
+ const observation=await observe('D:native-partial-text-colors',async()=>{
+  const widths=[320,390,768,1440];
+  const responsive=[];
+  for(const width of widths){
+   await page.setViewportSize({width,height:900});
+   await page.goto('/?page_id='+partialPageId);
+   const heading=page.locator('.elementor-widget-heading h2.elementor-heading-title');
+   const count=await heading.count();
+   const box=count?await heading.first().boundingBox():null;
+   const pageWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
+   const accent=count?await heading.first().evaluate(node=>{
+    const span=node.querySelector('span');
+    if(!span)return {text:null,color:null,visible:false,width:null,height:null};
+    const bounds=span.getBoundingClientRect();
+    return {text:span.textContent,color:getComputedStyle(span).color,
+     visible:span.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}),
+     width:bounds.width,height:bounds.height};
+   }):{text:null,color:null,visible:false,width:null,height:null};
+   responsive.push({width,pageWidth,left:box?.x??null,
+    right:box?box.x+box.width:null,height:box?.height??null,accent});
+  }
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto('/?page_id='+partialPageId);
+  const heading=page.locator('.elementor-widget-heading h2.elementor-heading-title');
+  const count=await heading.count();
+  const content=count?await heading.first().evaluate(node=>{
+   const spans=[...node.querySelectorAll('span')];
+   return {tag:node.tagName,text:node.textContent,html:node.innerHTML,
+    ordinaryText:node.firstChild?.nodeType===Node.TEXT_NODE?node.firstChild.textContent:null,
+    directChildCount:node.childNodes.length,spanCount:spans.length,
+    accentText:spans[0]?.textContent??null,
+    accentColor:spans[0]?getComputedStyle(spans[0]).color:null,
+    ordinaryColor:getComputedStyle(node).color,
+    childElements:node.children.length};
+  }):null;
+  return {atomic:{widgetType:'e-heading',selection:atomicSelection,
+    selectionToolbar:atomicToolbar,qualification:'NOT_PROVEN'},
+   legacy:{widgetType:'heading',authoredVia:'native-title-control',
+    editorReopened:reopenedCount,editorTitle:reopenedValue},
+   semanticHeadings:await page.locator('h1,h2,h3,h4,h5,h6').count(),
+   accessibleHeadings:await page.getByRole('heading',{name:fullText,level:2}).count(),
+   published:content||{tag:null,text:null,ordinaryText:null,accentText:null,spanCount:0,directChildCount:0,childElements:0,accentColor:null,ordinaryColor:null},responsive,expected:{fullText,ordinary,accented,accentColor:'rgb(180, 35, 78)',
+    authoredMarkup:legacyMarkup}};
+ });
+ await productAssertion('D:native-partial-text-colors',observation,snapshot=>{
+  expect(snapshot.atomic.widgetType).toBe('e-heading');
+  expect(snapshot.atomic.selection).toBe('Intelligence.');
+  expect(snapshot.atomic.qualification).toBe('NOT_PROVEN');
+  expect(snapshot.legacy.widgetType).toBe('heading');
+  expect(snapshot.legacy.authoredVia).toBe('native-title-control');
+  expect(snapshot.legacy.editorReopened).toBe(1);
+  expect(snapshot.legacy.editorTitle).toBe(snapshot.expected.authoredMarkup);
+  expect(snapshot.semanticHeadings).toBe(1);
+  expect(snapshot.accessibleHeadings).toBe(1);
+  expect(snapshot.published.tag).toBe('H2');
+  expect(snapshot.published.text).toBe(snapshot.expected.fullText);
+  expect(snapshot.published.ordinaryText).toBe(snapshot.expected.ordinary);
+  expect(snapshot.published.accentText).toBe(snapshot.expected.accented);
+  expect(snapshot.published.spanCount).toBe(1);
+  expect(snapshot.published.directChildCount).toBe(2);
+  expect(snapshot.published.childElements).toBe(1);
+  expect(snapshot.published.accentColor).toBe(snapshot.expected.accentColor);
+  expect(snapshot.published.ordinaryColor).not.toBe(snapshot.expected.accentColor);
+  expect(snapshot.responsive).toHaveLength(4);
+  for(const width of snapshot.responsive){
+   expect(width.pageWidth).toBeLessThanOrEqual(width.width+1);
+   expect(width.left).toBeGreaterThanOrEqual(-1);
+   expect(width.right).toBeLessThanOrEqual(width.width+1);
+   expect(width.height).toBeGreaterThan(0);
+   expect(width.accent.text).toBe(snapshot.expected.accented);
+   expect(width.accent.color).toBe(snapshot.expected.accentColor);
+   expect(width.accent.visible).toBe(true);
+   expect(width.accent.width).toBeGreaterThan(0);
+   expect(width.accent.height).toBeGreaterThan(0);
+  }
+  expect(snapshot.responsive[0].height).toBeGreaterThan(snapshot.responsive[3].height);
+ });
+});
+
 test('[I:native-link-activation] native Elementor link activates anchor',async({page})=>{
  const observation=await observe('I:native-link-activation',async()=>{
   await page.goto(frontend);

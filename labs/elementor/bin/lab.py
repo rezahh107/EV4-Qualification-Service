@@ -491,6 +491,104 @@ def probe_wordpress_persistence(post_id, fetch=wp):
     return proof
 
 
+
+PARTIAL_ID = 'D:native-partial-text-colors'
+PARTIAL_TEXT = 'Smart Homes Are Connected. Now They Need Intelligence.'
+PARTIAL_PREFIX = 'Smart Homes Are Connected. Now They Need '
+PARTIAL_ACCENT = 'Intelligence.'
+PARTIAL_MARKUP = PARTIAL_PREFIX + '<span style="color: #b4234e;">' + PARTIAL_ACCENT + '</span>'
+
+
+def _inspect_partial_heading_document(raw, identity):
+    """Prove native legacy Heading ID/parent, exact authoring format, and uniqueness."""
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return {'state': 'MISMATCH', 'reason': 'Partial Heading postmeta is not JSON'}
+    if not isinstance(data, list) or not isinstance(identity, dict) or \
+            identity.get('chosen_variant') != 'legacy' or \
+            identity.get('expected_markup') != PARTIAL_MARKUP or \
+            any(not isinstance(identity.get(k), str) or
+                not re.fullmatch(r'[a-zA-Z0-9]{7,12}', identity[k])
+                for k in ('container', 'heading', 'atomic_attempt')):
+        return {'state': 'MISMATCH', 'reason': 'Partial Heading fixture identity invalid'}
+    found, parents, heading_nodes = [], [], []
+    def visit(nodes, parent=None):
+        if not isinstance(nodes, list):
+            raise ValueError('Non-list Elementor children')
+        for node in nodes:
+            if not isinstance(node, dict):
+                raise ValueError('Malformed Elementor node')
+            if node.get('id') == identity['heading']:
+                found.append((node, parent))
+            if node.get('id') == identity['container']:
+                parents.append(node)
+            if node.get('widgetType') in ('heading', 'e-heading'):
+                heading_nodes.append(node)
+            visit(node.get('elements', []), node)
+    try:
+        visit(data)
+    except (ValueError, RecursionError):
+        return {'state': 'MISMATCH', 'reason': 'Malformed Elementor tree'}
+    if len(found) != 1 or len(parents) != 1 or len(heading_nodes) != 1:
+        return {'state': 'MISMATCH', 'reason': 'Duplicate, missing or extra heading'}
+    node, parent = found[0]
+    if parent is not parents[0] or parent.get('elType') != 'container' or \
+            node.get('elType') != 'widget' or node.get('widgetType') != 'heading' or \
+            (not isinstance(node.get('settings'), dict) or
+             node['settings'].get('title') != PARTIAL_MARKUP):
+        return {'state': 'MISMATCH', 'reason': 'Wrong native legacy title/topology'}
+    return {'state': 'VERIFIED', 'variant': 'legacy', 'saved_title': PARTIAL_MARKUP,
+            'generated_heading_id': identity['heading'], 'generated_container_id': identity['container']}
+
+
+def probe_partial_heading_persistence(post_id, fetch=wp):
+    """WP-CLI readback; browser rendering alone never proves persisted authoring."""
+    try:
+        identity = json.loads((ART / 'partial-heading-ids.json').read_text())
+        if identity.get('post_id') != post_id:
+            return {'state': 'MISMATCH', 'reason': 'Wrong Heading fixture post ID'}
+    except (OSError, ValueError, TypeError) as exc:
+        return {'state': 'UNAVAILABLE', 'reason': str(exc)[:400]}
+    try:
+        raw = fetch('post', 'meta', 'get', post_id, '_elementor_data').strip()
+        status = fetch('post', 'get', post_id, '--field=post_status').strip()
+    except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
+        return {'state': 'UNAVAILABLE', 'reason': str(exc)[:400]}
+    (ART / 'partial-heading-storage.json').write_text(json.dumps({
+        'post_id': post_id, 'identity': identity, 'raw_elementor_data': raw,
+        'post_status': status,
+    }, ensure_ascii=False, indent=2) + '\n')
+    proof = _inspect_partial_heading_document(raw, identity)
+    proof['published'] = status == 'publish'
+    if proof['state'] == 'VERIFIED' and not proof['published']:
+        proof.update(state='MISMATCH', reason='Partial Heading page not published')
+    return proof
+
+
+def finalize_partial_heading_evidence(result, storage):
+    scenario = next((item for item in result['scenarios']
+                     if item['test_identity'] == PARTIAL_ID), None)
+    if scenario is None:
+        return
+    if scenario['status'] == 'VERIFIED_PASS':
+        if storage.get('state') != 'VERIFIED' or storage.get('published') is not True:
+            scenario['observed'] = {'browser_status': 'VERIFIED_PASS',
+                                    'browser_observation': scenario['observed'],
+                                    'storage_probe': storage}
+            scenario['status'] = ('VERIFIED_FAIL' if storage.get('state') == 'MISMATCH'
+                                  else 'NOT_PROVEN')
+        else:
+            result['partial_heading_capability'] = {
+                'atomic_v4': 'NOT_PROVEN',
+                'legacy': 'VERIFIED_PASS',
+                'method': 'native-legacy-heading-title-control',
+                'qualified_identity': PARTIAL_ID,
+                'storage_probe': 'VERIFIED',
+                'target_site': 'NOT_PROVEN'
+            }
+
+
 def finalize_fixture_evidence(result, storage):
     """Authoritative final prerequisite state, then reconcile all dependents."""
     fixture = next((s for s in result['scenarios']
@@ -660,6 +758,14 @@ def execute(p, selected):
             raise RuntimeError('Cannot prove fixture post identity')
         r['fixture_post_id'] = ids[0]
         env['LAB_PAGE_ID'] = ids[0]
+        partial = wp('post', 'create', '--post_type=page', '--post_status=draft',
+                     '--post_title=EV4 Partial Heading Fixture', '--porcelain')
+        partial_ids = [s.strip() for s in partial.splitlines() if s.strip().isdigit()]
+        if len(partial_ids) != 1:
+            raise RuntimeError('Cannot prove independent partial Heading page identity')
+        r['partial_heading_post_id'] = partial_ids[0]
+        env['LAB_PARTIAL_PAGE_ID'] = partial_ids[0]
+        wp('post', 'meta', 'update', partial_ids[0], '_wp_page_template', 'elementor_canvas')
         r['environment_fingerprint'] = digest({'requested': p, 'installed': r['installed'],
                                                'test_sha256': r['test_sha256'], 'catalog_sha256': digest(CAT.read_bytes())})
         cmd = [binary('playwright'), 'test', '--config=playwright.config.mjs']
@@ -702,6 +808,14 @@ def execute(p, selected):
                    else {'state': 'NOT_EXECUTED'})
         r['fixture_storage_probe'] = storage
         finalize_fixture_evidence(r, storage)
+        partial_scenario = next((s for s in r['scenarios']
+                                 if s['test_identity'] == PARTIAL_ID), None)
+        partial_storage = (probe_partial_heading_persistence(partial_ids[0])
+                           if partial_scenario is not None and
+                           partial_scenario['status'] == 'VERIFIED_PASS'
+                           else {'state': 'NOT_EXECUTED'})
+        r['partial_heading_storage_probe'] = partial_storage
+        finalize_partial_heading_evidence(r, partial_storage)
         if test.returncode and not any(s['status'] in ('VERIFIED_FAIL', 'NOT_PROVEN') for s in r['scenarios']):
             r['setup_error'] = 'Playwright returned failure without recognizable assertion'
     except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as e:
@@ -924,11 +1038,51 @@ def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
             elif item.get('status') != expected:
                 raise ValueError('Mandatory executable product predicate failed: ' + identity)
             expected_executed[identity] = item
-    if len(expected_executed) != 15 or contrast_status is None:
+    if len(expected_executed) != 16 or contrast_status is None:
         raise ValueError('Executable product scenario contract incomplete')
     if result.get('execution') != ('VERIFIED_FAIL' if contrast_status == 'VERIFIED_FAIL'
                                   else 'INCOMPLETE'):
         raise ValueError('Overall product qualification was rewritten or inconsistent')
+
+
+    # Partial-text capability has no inherited contrast exception. Its PASS
+    # requires both qualified browser observations and independently read WP meta.
+    partial = expected_executed[PARTIAL_ID]
+    capability = result.get('partial_heading_capability')
+    storage = result.get('partial_heading_storage_probe')
+    if not isinstance(capability, dict) or not isinstance(storage, dict) or \
+            capability != {
+                'atomic_v4': 'NOT_PROVEN', 'legacy': 'VERIFIED_PASS',
+                'method': 'native-legacy-heading-title-control',
+                'qualified_identity': PARTIAL_ID, 'storage_probe': 'VERIFIED',
+                'target_site': 'NOT_PROVEN'
+            } or storage.get('state') != 'VERIFIED' or storage.get('published') is not True:
+        raise ValueError('Partial Heading native persistence evidence unproven')
+    try:
+        sample = json.loads((ART / 'partial-heading-storage.json').read_text())
+        identity = json.loads((ART / 'partial-heading-ids.json').read_text())
+        proof = _inspect_partial_heading_document(sample['raw_elementor_data'], identity)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise ValueError('Partial Heading postmeta sample unavailable') from exc
+    if proof.get('state') != 'VERIFIED' or \
+            sample.get('identity') != identity or \
+            sample.get('post_id') != result.get('partial_heading_post_id') or \
+            sample.get('post_status') != 'publish' or \
+            storage.get('generated_heading_id') != identity.get('heading') or \
+            storage.get('generated_container_id') != identity.get('container'):
+        raise ValueError('Partial Heading actual native storage does not match result')
+    try:
+        receipt = json.loads((ART / 'observation-provenance' /
+                              'D__native-partial-text-colors.observation.json').read_text())
+        observation = receipt['value']
+        if observation['atomic']['qualification'] != 'NOT_PROVEN' or \
+                observation['atomic']['selection'] != PARTIAL_ACCENT or \
+                observation['legacy']['authoredVia'] != 'native-title-control' or \
+                observation['legacy']['editorTitle'] != PARTIAL_MARKUP or \
+                observation['published']['text'] != PARTIAL_TEXT:
+            raise ValueError('Partial Heading variant attribution is unproven')
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ValueError('Partial Heading observed variant evidence unavailable') from exc
 
     # Every current-run Playwright spec must belong to the approved catalog.
     # In particular, a failed *unclassified* spec cannot disappear by only
@@ -990,7 +1144,7 @@ def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
     number_failed = int(contrast_status == 'VERIFIED_FAIL')
     if not isinstance(stats, dict) or any(
             stats.get(key) != value for key, value in
-            (('expected', 15 - number_failed), ('unexpected', number_failed),
+            (('expected', 16 - number_failed), ('unexpected', number_failed),
              ('skipped', 0), ('flaky', 0))):
         raise ValueError('Unexpected/unclassified Playwright test outcome')
     if contrast_status in ('VERIFIED_FAIL', 'VERIFIED_PASS'):
@@ -1008,9 +1162,21 @@ def verify_ci_acceptance(result, report, p, *, selected, lab_exit, expected):
             raise ValueError('Measured contrast evidence unavailable') from exc
     if lab_exit != (2 if result['execution'] != 'VERIFIED_PASS' else 0):
         raise ValueError('Laboratory command exit does not match recorded qualification')
+    # Admission summary is a projection of the already-validated catalog roster,
+    # never an independent authority that can drift when catalog entries change.
+    mandatory_verified = sum(
+        item['status'] == 'VERIFIED_PASS'
+        for identity, item in expected_executed.items()
+        if identity != CI_INFORMATIONAL
+    )
+    not_executed = sum(item['status'] == 'NOT_EXECUTED' for item in scenarios)
+    pro_unavailable = sum(
+        item['status'] == 'PRO_OR_LICENSE_UNAVAILABLE' for item in scenarios
+    )
     return {'ci_acceptance': 'PASS', 'product_execution': result['execution'],
-            'informational_contrast': contrast_status, 'mandatory_verified': 14,
-            'not_executed': 12, 'pro_unavailable': 1}
+            'informational_contrast': contrast_status,
+            'mandatory_verified': mandatory_verified,
+            'not_executed': not_executed, 'pro_unavailable': pro_unavailable}
 
 
 def ci_acceptance_command(p, selected, lab_exit, expected):
