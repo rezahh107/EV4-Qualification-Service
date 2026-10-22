@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
+import { parse } from 'acorn';
 import { test, expect } from '@playwright/test';
 import { observe, receiptPath } from '../tests/observation.mjs';
 import { productAssertion } from '../tests/qualification.mjs';
@@ -109,3 +111,61 @@ test('unavailable native-title-shaped control remains unproven, never a product 
 function statusFor(identity, kind) {
   return JSON.parse(fs.readFileSync(receiptPath(identity, kind),'utf8')).state;
 }
+
+test('actual D predicate rejects left-clipped geometry despite passing right and document widths', () => {
+  // Isolated predicate mutation, NOT a browser observation or Elementor claim.
+  // Execute the exact reviewed callback from native.spec.mjs, not a copied
+  // approximation that could diverge from the real admission predicate.
+  const source=fs.readFileSync(new URL('../tests/native.spec.mjs', import.meta.url),'utf8');
+  const syntax=parse(source,{ecmaVersion:2025,sourceType:'module'});
+  const declarations=syntax.body.filter(node=>
+    node.type==='ExpressionStatement' &&
+    node.expression?.callee?.name==='test' &&
+    node.expression.arguments[0]?.value?.startsWith('[D:native-partial-text-colors]'));
+  assert.equal(declarations.length,1);
+  const callbacks=[];
+  function walk(node) {
+    if(!node || typeof node!=='object')return;
+    if(node.type==='CallExpression' && node.callee?.name==='productAssertion' &&
+       node.arguments[0]?.value===partialIdentity)callbacks.push(node.arguments[2]);
+    for(const [key,value] of Object.entries(node)) {
+      if(['start','end','raw','loc','range'].includes(key))continue;
+      if(Array.isArray(value))value.forEach(walk);
+      else if(value && typeof value==='object')walk(value);
+    }
+  }
+  walk(declarations[0].expression.arguments[1].body);
+  assert.equal(callbacks.length,1);
+  const callback=callbacks[0];
+  const predicate=runInNewContext('('+source.slice(callback.start,callback.end)+')',{expect});
+  const ordinary='Smart Homes Are Connected. Now They Need ';
+  const accent='Intelligence.';
+  const color='rgb(180, 35, 78)';
+  const title=ordinary+'<span style="color: #b4234e;">'+accent+'</span>';
+  const snapshot={
+    atomic:{widgetType:'e-heading',selection:accent,qualification:'NOT_PROVEN'},
+    legacy:{widgetType:'heading',authoredVia:'native-title-control',
+      editorReopened:1,editorTitle:title},
+    semanticHeadings:1,accessibleHeadings:1,
+    published:{tag:'H2',text:ordinary+accent,ordinaryText:ordinary,
+      accentText:accent,spanCount:1,directChildCount:2,childElements:1,
+      accentColor:color,ordinaryColor:'rgb(110, 193, 228)'},
+    responsive:[320,390,768,1440].map((width,index)=>({
+      width,pageWidth:width,left:0,right:width-1,height:[128,96,64,32][index]
+    })),
+    expected:{fullText:ordinary+accent,ordinary,accented:accent,
+      accentColor:color,authoredMarkup:title}
+  };
+  assert.doesNotThrow(()=>predicate(snapshot),'all four positive viewports');
+  const atTolerance=structuredClone(snapshot);
+  atTolerance.responsive[0].left=-1;
+  assert.doesNotThrow(()=>predicate(atTolerance),'K-equivalent -1px tolerance');
+  const clipped=structuredClone(snapshot);
+  clipped.responsive[0].left=-12;
+  // Every other geometry condition is deliberately still satisfied.
+  assert.equal(clipped.responsive[0].right,319);
+  assert.equal(clipped.responsive[0].pageWidth,320);
+  assert.ok(clipped.responsive[0].height>0);
+  assert.throws(()=>predicate(clipped),error=>error?.matcherResult?.pass===false,
+    'the *actual* product predicate must reject left clipping');
+});
